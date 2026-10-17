@@ -33,6 +33,10 @@
 - No terminal, no code, no config files for the operator at any point.
 - A free-text box is still available for anything the form can't express; if the
   text is ambiguous, the UI shows the single clarifying question as a form too.
+- A checkbox: **"Cross-check result with another AI when done"** — after the task,
+  Jev verifies the run log and, if flagged, a configured second AI (e.g. Mistral
+  Vibe) suggests fixes, shown as a plain-language report card. See
+  `JEV-INTEGRATION.md`.
 
 ## 3b. Target capabilities
 

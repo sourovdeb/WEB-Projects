@@ -22,6 +22,13 @@ Pi (agent, driven headless via Pi's RPC mode; terminal remains a background opti
    └── project instructions file — enforces the no-decision protocol
             (literal execution, one clarifying question on ambiguity)
 
+Jev (TypeSafe) — decision model, built into Pi as a classifier (VERIFIED-LIVE)
+   verifies at 4 points: ambiguity check (before planning), per-step plan
+   conformance, irreversible-risk scoring, post-task cross-reference of the run
+   log. Returns typed answers + probabilities; flags only, never acts.
+   On flags, a configured chat AI (Mistral Vibe or any added model) suggests
+   fixes via the shared STATE handoff. See JEV-INTEGRATION.md.
+
 piwin-helper/  (Python, runs on Windows)
    find_window | click | type_text | screenshot | list_controls
    built on Windows UI Automation (engine confirmed at pilot step G2)
