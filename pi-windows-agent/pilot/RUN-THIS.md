@@ -1,28 +1,42 @@
-# PiWin GUI-Control Pilot (Step 6) — v3
+# PiWin Pilot — Run Instructions (final)
 
-One script: `pilot.py`. Run it on your Windows PC **with every Notepad window
-closed** — it refuses to start if any `notepad.exe` process exists, to avoid
-sharing a process with your unsaved work.
+The project is **not functional as an assistant**. The dispatcher, UI host, and
+helper do not exist. This pilot is the only runnable piece, and a PASS only
+shows that Notepad can be driven on this machine. **Do not build PiWin yet.**
 
-```
-pip install pywinauto pillow psutil
-python pilot.py
-```
+## Run the pilot
 
-Version pins (install exactly these; unpinned installs are not supported):
-`pywinauto==0.6.9`, `pillow==10.4.0`, `psutil==6.0.0`.
+1. **Close every Notepad window, including ones in the taskbar.** The script
+   refuses to start if `notepad.exe` is already running, and it does not kill
+   processes.
+2. Open PowerShell in the pilot folder (the one containing `pilot.py`).
+3. Install the **pinned** packages, then run it:
+   ```
+   py -m pip install pywinauto==0.6.9 pillow==10.4.0 psutil==6.0.0
+   py pilot.py
+   ```
+4. **Do not type or click while it runs** — it sends keystrokes to whatever
+   window has focus.
+5. Read the last lines:
+   - `PASS: typed, read back, screenshot saved, and pid ... is gone.`
+     This machine can drive Notepad. Check that `piwin_pilot.png` is on your
+     Desktop (or home folder if Desktop was not found).
+   - `FAIL:` — **stop. Leave the window alone and copy the full console text.**
+     FAIL is the *expected* result on current Windows: Windows 11 Notepad often
+     has no classic Edit control, so the read-back check stops and leaves the
+     window open — that is the safe outcome. A PASS is not established for any
+     machine until it runs there. **Do not weaken the check to force a pass.**
 
-**What it does:** opens ONE fresh Notepad process, types "PiWin pilot OK -
-<timestamp>" into it, reads the text back from that window to verify, saves a
-screenshot of that window only, then closes that window (handling its own
-Don't Save prompt) — but only if that PID owns exactly one window.
+## After the run
 
-**PASS means** the console ends with:
-`PASS: typed, read back, screenshot saved, and pid <pid> is gone.`
-PASS is printed only after psutil confirms the process no longer exists. Any
-`FAIL:` line means exactly what it says; the window is left as-is.
+Send the full console text back. That result decides the next change:
+- A read-back failure on Windows 11 Notepad is useful data — it means classic
+  Notepad is no longer a reliable pilot target and a different app (with a
+  real UI Automation tree) must be chosen for the pilot.
+- A PASS covers exactly this machine and this app. It does not open Gate G2
+  for any second app and does not prove the dispatcher, which does not exist.
 
-**Scope of a PASS:** it covers UI Automation driving classic Notepad on that
-machine, that run. It does NOT open Gate G2 for any second app (the target app
-needs its own recorded run), and it does not prove the dispatcher guard, which
-does not exist yet.
+## Not allowed while the pilot is pending
+
+Do not install the agent, do not start any extension, and do not run this
+while any Notepad window is open.
