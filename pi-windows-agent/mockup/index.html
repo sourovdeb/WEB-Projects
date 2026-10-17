@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PiWin — UI Mockup</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--card:#1d212b;--line:#2a3040;
+    --txt:#e8eaf0;--mut:#8b93a7;--acc:#4f8cff;--acc2:#6ea8ff;
+    --ok:#3ecf8e;--warn:#f5b83d;--bad:#ef5b5b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}
+  body{background:var(--bg);color:var(--txt);font-size:14px}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  /* sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--line);padding:18px 14px}
+  .logo{font-weight:700;font-size:17px;margin-bottom:20px}
+  .logo span{color:var(--acc)}
+  .nav a{display:block;padding:9px 10px;border-radius:8px;color:var(--mut);text-decoration:none;margin-bottom:2px}
+  .nav a.on{background:var(--card);color:var(--txt)}
+  .nav a:hover{color:var(--txt)}
+  .foot{margin-top:24px;font-size:11px;color:var(--mut);line-height:1.6}
+  .mode{display:inline-block;margin-top:8px;padding:3px 8px;border:1px solid var(--line);border-radius:20px;font-size:11px;color:var(--ok)}
+  /* main */
+  .main{padding:22px 26px;max-width:980px}
+  h1{font-size:19px;margin-bottom:4px}
+  .sub{color:var(--mut);margin-bottom:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:14px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .f{flex:1;min-width:200px}
+  label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}
+  input[type=text],select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:9px 11px;font-size:13px}
+  .picker{display:flex;gap:8px;align-items:center}
+  .picker input{flex:1}
+  button{cursor:pointer;border:none;border-radius:8px;font-size:13px;padding:9px 14px}
+  .btn-sec{background:var(--card);color:var(--txt);border:1px solid var(--line)}
+  .btn-acc{background:var(--acc);color:#fff;font-weight:600}
+  .btn-acc.big{width:100%;padding:13px;font-size:15px}
+  .btn-ok{background:var(--ok);color:#08281a;font-weight:600}
+  .btn-stop{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+  /* steps */
+  .step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:10px}
+  .step .head{display:flex;align-items:center;gap:10px}
+  .num{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .sname{font-weight:600}
+  .sdesc{color:var(--mut);font-size:12px;margin:2px 0 0 36px}
+  .right{margin-left:auto;display:flex;gap:6px}
+  .icon{background:transparent;border:none;color:var(--mut);font-size:13px;padding:4px 6px}
+  .icon:hover{color:var(--txt)}
+  .assist{margin:10px 0 0 36px;border-top:1px dashed var(--line);padding-top:10px}
+  .assist .t{font-size:12px;color:var(--warn);margin-bottom:8px}
+  .assist textarea{min-height:48px;font-size:12px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:11px;padding:3px 9px;border-radius:20px;background:#232839;color:var(--mut)}
+  .chip.r{color:var(--acc2);cursor:pointer}
+  .steps-add{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .steps-add button{background:#20273a;color:var(--acc2);border:1px dashed var(--line)}
+  /* skills */
+  .skill{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px}
+  .badge{font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(62,207,142,.15);color:var(--ok)}
+  .badge.none{background:#2a3040;color:var(--mut)}
+  /* checklist run view */
+  .run{display:none}
+  .bar{position:sticky;top:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;z-index:5}
+  .bar .st{font-weight:600}
+  .bar .prog{flex:1;height:7px;background:var(--card);border-radius:6px;overflow:hidden}
+  .bar .prog i{display:block;height:100%;background:var(--acc);width:38%}
+  .rstep{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+  .dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+  .done{background:var(--ok);color:#08281a}
+  .wait{background:#2a3040;color:var(--mut)}
+  .act{background:var(--acc);color:#fff;animation:pulse 1.2s infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .res{margin-left:auto;color:var(--mut);font-size:12px}
+  .res.ok{color:var(--ok)}
+  .gate{margin-left:auto}
+  .confirm{background:rgba(245,184,61,.07);border:1px solid rgba(245,184,61,.4);border-radius:10px;padding:12px 14px;margin-bottom:8px;font-size:13px}
+  .confirm b{color:var(--warn)}
+  .report .score{font-size:26px;font-weight:700;color:var(--ok)}
+  .report .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .report .cell{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px}
+  .fix{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px}
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tabs button{background:var(--card);border:1px solid var(--line);color:var(--mut)}
+  .tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="side">
+    <div class="logo">Pi<span>Win</span></div>
+    <div class="nav">
+      <a href="#" class="on">New Task</a>
+      <a href="#">My Templates</a>
+      <a href="#">Skills</a>
+      <a href="#">Services (Gmail · YouTube · WordPress)</a>
+      <a href="#">History</a>
+      <a href="#">Settings</a>
+    </div>
+    <div class="foot">
+      Assistant: Pi + Mistral<br>
+      Verifier: Jev (TypeSafe) <span class="mode">connected</span><br><br>
+      Everything runs only with your approval.
+    </div>
+  </div>
+
+  <div class="main">
+
+  <!-- ================= BUILD TAB ================= -->
+  <div id="build">
+    <h1>New Task</h1>
+    <div class="sub">Fill the form. Click a step to add it. You approve every action — the bot decides nothing.</div>
+
+    <div class="tabs">
+      <button class="on">① Build</button>
+      <button onclick="showRun()">② Review &amp; Run</button>
+      <button onclick="showReport()">③ Report (example)</button>
+    </div>
+
+    <div class="panel">
+      <h2>Task</h2>
+      <div class="row">
+        <div class="f">
+          <label>Recording / main file</label>
+          <div class="picker"><input type="text" value="C:\Videos\gameplay_2024.mp4"><button class="btn-sec">Browse…</button></div>
+        </div>
+        <div class="f">
+          <label>App to use</label>
+          <select><option>Shotcut (detected)</option><option>Clipchamp (detected)</option><option>Other…</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Steps (in order — click a card to expand)</h2>
+
+      <div class="step">
+        <div class="head"><div class="num">1</div><div><div class="sname">✂️ Trim clip</div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+        <div class="sdesc">Cut 0:00 – 1:30 · keep the rest</div>
+        <div class="assist" style="display:none">
+          <div class="t">⚠ If there's a problem… (your references &amp; alternatives)</div>
+          <textarea>Ref: screenshot of Shotcut timeline. Alt: if the clip won't split at 1:30, split at nearest keyframe.</textarea>
+          <div class="chips"><span class="chip r">📎 screenshot_timeline.png</span><span class="chip r">🔗 how-to: cutting in Shotcut</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="head"><div class="num">2</div><div><div class="sname">🎵 Add music</div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+        <div class="sdesc">intro.mp3 · start 0:00 · fade out at 0:10 · volume 40%</div>
+        <div class="assist" style="display:none">
+          <div class="t">⚠ If there's a problem… (your references &amp; alternatives)</div>
+          <textarea>Alt: if intro.mp3 is too loud, use music_soft.mp3 instead.</textarea>
+          <div class="chips"><span class="chip r">🎵 music_soft.mp3</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="head"><div class="num">3</div><div><div class="sname">💾 Export video</div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+        <div class="sdesc">Preset: YouTube 1080p → C:\Users\you\Desktop (picked by you)</div>
+        <div class="assist" style="display:none">
+          <div class="t">⚠ If there's a problem…</div>
+          <textarea>Alt: export 720p if export takes longer than 10 minutes.</textarea>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="head"><div class="num">4</div><div><div class="sname">▶ Publish to YouTube</div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+        <div class="sdesc">In open browser · Title: "My Gameplay #12" · Visibility: Unlisted · via: MCP</div>
+        <div class="assist" style="display:none">
+          <div class="t">⚠ If there's a problem…</div>
+          <textarea>Alt: if upload page is stuck, use YouTube API instead of browser.</textarea>
+        </div>
+      </div>
+
+      <div class="steps-add">
+        <button>+ Trim</button><button>+ Music</button><button>+ Text overlay</button><button>+ Transition</button>
+        <button>+ Export</button><button>+ Publish</button><button>+ Email (Gmail)</button>
+        <button>+ WordPress post</button><button>+ Recycle / cleanup</button><button>+ Custom step…</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Skills this task may use</h2>
+      <div class="skill"><input type="checkbox" checked> <span>YouTube upload</span> <span class="badge">verified 2026-09-12</span></div>
+      <div class="skill"><input type="checkbox" checked> <span>Silence cutting</span> <span class="badge">verified 2026-09-10</span></div>
+      <div class="skill"><input type="checkbox"> <span>WordPress publish</span> <span class="badge none">not tested yet</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>When done</h2>
+      <label style="display:flex;gap:9px;align-items:center;font-size:13px;color:var(--txt)">
+        <input type="checkbox" checked> Cross-check result with another AI (Jev verifies → Mistral Vibe suggests fixes)
+      </label>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn-sec" onclick="showRun()">🧪 Test (dry run)</button>
+      <button class="btn-sec">💾 Save as template</button>
+      <button class="btn-acc big" style="max-width:220px" onclick="showRun()">▶ Run</button>
+    </div>
+  </div>
+
+  <!-- ================= RUN TAB ================= -->
+  <div class="run" id="run">
+    <h1>Review &amp; Run</h1>
+    <div class="sub">Jev checked every step against your form. Red = something beyond your request — you decide.</div>
+
+    <div class="tabs">
+      <button onclick="showBuild()">① Build</button>
+      <button class="on">② Review &amp; Run</button>
+      <button onclick="showReport()">③ Report (example)</button>
+    </div>
+
+    <div class="confirm" style="border-color:rgba(239,91,91,.5);background:rgba(239,91,91,.07)">
+      <b>Jev flag 78%:</b> Step 5 "Add end screen" — not in your form. &nbsp;
+      <button class="btn-ok" style="padding:4px 10px">Keep</button>
+      <button class="btn-stop" style="padding:4px 10px">Remove</button>
+    </div>
+
+    <div class="bar">
+      <span class="st">Running step 2 of 5</span>
+      <div class="prog"><i></i></div>
+      <button class="btn-stop">⏸ Pause</button><button class="btn-stop">■ Stop</button>
+    </div>
+
+    <div class="rstep"><div class="dot done">✓</div><div>1. Trim clip — cut 0:00–1:30 in Shotcut</div><div class="res ok">done · screenshot</div></div>
+    <div class="rstep"><div class="dot act">…</div><div>2. Add music — intro.mp3 at 0:00</div><div class="res">working…</div></div>
+    <div class="rstep"><div class="dot wait">3</div><div>3. Export video → Desktop</div><div class="gate"><button class="btn-sec" style="padding:5px 10px">Approve</button></div></div>
+    <div class="rstep"><div class="dot wait">4</div><div>4. Publish to YouTube (Unlisted)</div><div class="gate"><button class="btn-sec" style="padding:5px 10px">Approve</button></div></div>
+
+    <div class="confirm">
+      <b>Step 4 needs your confirmation:</b> "About to publish <b>My Gameplay #12</b> as <b>Unlisted</b> to your channel.
+      This cannot be undone." — type the video title to confirm: <input type="text" style="width:200px;display:inline-block">
+    </div>
+  </div>
+
+  <!-- ================= REPORT TAB ================= -->
+  <div class="run report" id="report">
+    <h1>Task Report</h1>
+    <div class="sub">Everything finished — verified by Jev, fixes (if any) suggested by Mistral Vibe.</div>
+
+    <div class="tabs">
+      <button onclick="showBuild()">① Build</button>
+      <button onclick="showRun()">② Review &amp; Run</button>
+      <button class="on">③ Report (example)</button>
+    </div>
+
+    <div class="panel">
+      <div class="score">5 / 5 steps complete ✓</div>
+      <div style="color:var(--mut)">Video link: <span style="color:var(--acc2)">youtu.be/xK92jf…</span> (click to copy)</div>
+      <div class="grid">
+        <div class="cell"><b>Jev verification:</b><br>All requested steps completed. Nothing extra was done.<br>Confidence: 96%</div>
+        <div class="cell"><b>Cross-check AI:</b><br>Mistral Vibe reviewed the run log.<br>No issues found.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Fix suggestions (only if Jev flags something)</h2>
+      <div class="fix">🔊 Music slightly loud at 0:45 — re-export at 35% volume? <button class="btn-ok" style="margin-left:auto;padding:5px 12px">Run fix</button><button class="btn-stop" style="padding:5px 12px">Ignore</button></div>
+      <div style="color:var(--mut);font-size:12px">Fixes run as new mini-tasks — same approvals apply.</div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+function tog(b){const a=b.closest('.step').querySelector('.assist');a.style.display=a.style.display==='none'?'block':'none';}
+function showBuild(){document.getElementById('build').style.display='block';document.getElementById('run').style.display='none';document.getElementById('report').style.display='none';}
+function showRun(){showBuild();document.getElementById('build').style.display='none';document.getElementById('run').style.display='block';}
+function showReport(){showBuild();document.getElementById('build').style.display='none';document.getElementById('report').style.display='block';}
+</script>
+</body>
+</html>
