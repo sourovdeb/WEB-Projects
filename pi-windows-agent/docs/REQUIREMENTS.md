@@ -48,6 +48,41 @@
 - Terminal collaboration with Mistral Vibe via a shared STATE file handoff
   (background mode for advanced use; the UI is the default).
 
+## 3c. Everything is a step scaffold (added per operator, v0.2)
+
+Not just editing — **every task** is built from the same step-scaffold GUI:
+
+- A **step library** in the UI: each step type is a card with its own form
+  (app action, file op, browser action, email, publish, recycle/cleanup,
+  custom…). The operator composes any number of them, in any order, for any
+  workflow — recording, editing, publishing, emailing, site updates, cleanup.
+- **Per-step references/alternatives (assist):** every step card has an
+  optional **"If there's a problem…"** section where the operator can attach
+  references (screenshots, a how-to link, a sample file) and alternative
+  approaches ("if the Export button is greyed out, render at 720p instead").
+  When a step fails or a UI element isn't found, PiWin shows the operator's
+  references and alternatives first and picks one **only after the operator
+  clicks it** — never silently.
+- **Skills selection:** a Skills panel lists available skills (e.g.
+  "YouTube upload", "WordPress post", "Silence cutting", "Recycle old
+  files"); the operator toggles which skills a task may use. Skills are
+  saved step templates (see save-and-test below), not autonomous behaviors.
+- **Manual selection of every location:** every path a task touches — input
+  files, output folder, export destination, recycle-bin/cleanup target — is
+  chosen by the operator via folder picker, never guessed. Includes a
+  dedicated **cleanup/recycle step** (move to Recycle Bin) with its own
+  confirmation listing every file it will touch.
+- **Service integrations — Gmail, YouTube, WordPress** — each usable via two
+  modes the operator picks per step: **MCP** (managed connector, e.g. a
+  WordPress MCP server) or **API** (direct key-based). Connection screens are
+  forms (paste key / sign in once); credentials stored only in Pi's
+  `auth.json` / OS key store, gitignored.
+- **Save and test:** any composed step sequence (or single step) can be
+  **saved as a template** ("My YouTube upload") and **tested on demand** —
+  a dry-run that walks the real UI and reports what it *would* do, with no
+  irreversible action executed. Tested templates get a green "verified
+  on <date>" badge and become selectable skills.
+
 ## 4. Non-goals
 
 - Not a general autonomous agent. No scheduling, no background autonomy, no
