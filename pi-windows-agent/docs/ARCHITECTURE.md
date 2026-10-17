@@ -19,7 +19,6 @@ Pi (agent, driven headless via the Pi SDK in-process; terminal remains a backgro
    │      └── shells out to helper (below), returns JSON + screenshot path
    │           ui.find_window  ui.list_windows  ui.list_controls
    │           ui.click        ui.type          ui.read_screen (screenshot)
-   ├── piwin-browser/     Playwright-based browser tool for web/publish flows
    └── project instructions file — enforces the no-decision protocol
             (literal execution, one clarifying question on ambiguity)
 
@@ -27,30 +26,49 @@ Jev (TypeSafe) — decision model, built into Pi as a classifier (VERIFIED-LIVE)
    verifies at 4 points: ambiguity check (before planning), per-step plan
    conformance, irreversible-risk scoring, post-task cross-reference of the run
    log. Returns typed answers + probabilities; flags only, never acts.
-   On flags, a configured chat AI (Mistral Vibe or any added model) suggests
-   fixes via the shared STATE handoff. See JEV-INTEGRATION.md.
+   On flags, a configured chat AI suggests fixes as clickable UI report rows
+   (never a shared state file). DEFERRED — see JEV-INTEGRATION.md.
 
-piwin-helper/  (Python, runs on Windows)
+piwin-helper/  (Python, runs on Windows) — refuses any call without the UI
+   host's per-launch token
    find_window | click | type_text | screenshot | list_controls
-   built on Windows UI Automation (engine confirmed at pilot step G2)
+   built on Windows UI Automation (engine UNVERIFIED until pilot passes; apps
+   are supported only via tested-apps.json)
 ```
+
+> **SUPERSEDED portions removed.** The typed-`y` batch gate, the
+> docs/STATE.md handoff, "app-agnostic / any application", the Playwright
+> publish component, and the "engine confirmed at G2" claim are retired.
+> The UI Automation engine is UNVERIFIED until the pilot runs. v0.1 has no
+> publish/browser/second-model components. This diagram shows the v0.1 shape.
+> Sole authority: SAFETY-DISPATCHER.md.
 
 ## Flow
 
 1. Operator opens the PiWin app window and builds the task as a form
    (app picker, step picker, file pickers) or types free text; clicks **Run**.
-2. Pi (with project instructions) produces a literal step plan; if ambiguous it
-   returns the single clarifying question, shown in the UI as a form.
-3. The UI shows the plan as a live checklist; operator clicks **Approve** per step
-   (or **Stop**).
+2. Pi produces a literal step plan; if ambiguous it returns the single
+   clarifying question, shown in the UI as a form. (v0.1 target app must be on
+   tested-apps.json; unrequested steps are Removed by default.)
+3. The UI shows each pending call (tool, target pid, arguments); the operator's
+   Approve click mints a hash of the serialized call (canonical JSON defined in
+   SAFETY-DISPATCHER.md). Unapproved calls are blocked by the tool_call hook AND
+   the helper's token check.
 4. `ui.*` tools drive the target application; each call returns JSON
    (success/fail, screenshot) which the UI displays in plain language.
-5. Irreversible keywords trigger a second confirmation in the UI naming the exact
-   target.
-6. Results and handoff state are written to `docs/STATE.md` for Vibe collaboration.
+5. Irreversible form action classes (not keyword matching) trigger a second
+   confirmation naming the exact target.
+6. Session handoff is the gitignored, data-only `state.json`
+   (STATE.example.md); nothing committed carries agent instructions.
 
 The operator never opens a terminal, editor, or config file. Setup (installing
 Pi, model login) is done once by the build agent and packaged into an installer.
+
+## Deferred (post-gate)
+
+Publish/browser flows, Gmail/YouTube/WordPress MCP or API, skills execution,
+and the Jev + second-model cross-check are deferred design only (REQUIREMENTS
+§3c, JEV-INTEGRATION.md as revised). None ship in v0.1.
 
 ## Model configuration
 
@@ -64,7 +82,8 @@ Pi runs with a Mistral model (`/login` or OpenAI-compatible entry in
   covering every side-effecting tool. The operator's approval is bound to the
   serialized call hash, not to a sentence. Prompt instructions and Jev are
   advisory only and can never waive a confirm.
-- No network listeners, no remote control, no background services.
+- The UI host binds 127.0.0.1 only, requires a per-launch token, rejects
+  cross-origin requests. It is a listener and is hardened as one.
 - Credentials live in the OS key store (Windows Credential Manager); never in
   the repo. Screenshots are cropped to the target window and never sent to
   cloud models by default.

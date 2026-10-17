@@ -111,10 +111,10 @@
   <!-- ================= BUILD TAB ================= -->
   <div id="build">
     <h1>New Task</h1>
-    <div class="sub">Fill the form. Click a step to add it. You approve every action — the bot decides nothing.</div>
+    <div class="sub">Fill the form. Click a step to add it. You approve every call — the bot decides nothing. <b>v0.1: one tested app; publish/Gmail/WordPress/MCP steps below are deferred design.</b></div>
 
     <div class="tabs">
-      <button class="on">① Build</button>
+      <button data-tab="build" class="on" onclick="show('build')">① Build</button>
       <button data-tab="run" onclick="show('run')">② Review &amp; Run</button>
       <button data-tab="report" onclick="show('report')">③ Report (example)</button>
     </div>
@@ -213,18 +213,18 @@
 
     <div class="tabs">
       <button data-tab="build" onclick="show('build')">① Build</button>
-      <button class="on">② Review &amp; Run</button>
+      <button data-tab="run" class="on" onclick="show('run')">② Review &amp; Run</button>
       <button data-tab="report" onclick="show('report')">③ Report (example)</button>
     </div>
 
     <div class="confirm" style="border-color:rgba(239,91,91,.5);background:rgba(239,91,91,.07)">
       <b>Jev flag 78%:</b> Step 5 "Add end screen" was not in your form — steps you did not ask for are <b>removed by default</b>. To keep it, edit the form so it is explicitly yours. &nbsp;
-      <button class="btn-ok" style="padding:4px 10px">Remove (default)</button>
+      <button class="btn-ok" style="padding:4px 10px" onclick="this.closest('.confirm').remove()">Remove (default)</button>
       <button class="btn-stop" style="padding:4px 10px">Edit form to keep it</button>
     </div>
 
     <div class="bar">
-      <span class="st">Running step 2 of 5</span>
+      <span class="st">Running step 2 of 5 (steps 3–4 not started: each call needs your approval)</span>
       <div class="prog"><i></i></div>
       <button class="btn-stop">⏸ Pause</button><button class="btn-stop">■ Stop</button>
     </div>
@@ -248,7 +248,7 @@
     <div class="tabs">
       <button data-tab="build" onclick="show('build')">① Build</button>
       <button data-tab="run" onclick="show('run')">② Review &amp; Run</button>
-      <button class="on">③ Report (example)</button>
+      <button data-tab="report" class="on" onclick="show('report')">③ Report (example)</button>
     </div>
 
     <div class="panel">

@@ -1,84 +1,129 @@
-import getpass
+import ctypes
+import os
+import sys
 import time
+from ctypes import wintypes
 
-from pywinauto import Application
-from PIL import ImageGrab
+import psutil  # pinned: psutil==6.0.0
+from pywinauto import Application, Desktop
 
-PID_NOTE = "This pilot opens ONE Notepad process, verifies the text inside THAT "
-"window only, and closes THAT window only. Other Notepad windows are never touched."
+# Tested with: pywinauto==0.6.9, pillow==10.4.0, psutil==6.0.0 — unpinned installs are not supported
+
 TEXT = "PiWin pilot OK"
 STAMP = time.strftime("%Y-%m-%d %H:%M:%S")
 FULL = f"{TEXT} - {STAMP}"
 
+
+def known_desktop():
+    # Real Known Folder lookup (handles OneDrive / localized Desktop).
+    try:
+        class UUID(ctypes.Structure):
+            _fields_ = [("Data1", wintypes.DWORD), ("Data2", wintypes.WORD),
+                        ("Data3", wintypes.WORD), ("Data4", wintypes.BYTE * 8)]
+        buf = ctypes.c_wchar_p()
+        FOLDERID_Desktop = UUID(
+            0xB4BFCC3A, 0xDB9E, 0x4AE4,
+            (ctypes.c_ubyte * 8)(0x9B, 0x34, 0x34, 0xF6, 0x97, 0x05, 0x83, 0x50))
+        if ctypes.windll.shell32.SHGetKnownFolderPath(
+            ctypes.byref(FOLDERID_Desktop), 0, None, ctypes.byref(buf)
+        ) == 0:
+            return buf.value
+    except Exception:
+        pass
+    return os.path.join(os.path.expanduser("~"), "Desktop")
+
+
+def fail(msg):
+    print("FAIL:", msg)
+    print("Any window this script opened is left as-is. Close it manually.")
+    sys.exit(1)
+
+
+# 1) Refuse to start if Notepad is already running (shared-process risk).
+procs = [p for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == "notepad.exe"]
+if procs:
+    fail(
+        "Notepad is already running (pid(s): %s). Close every Notepad window "
+        "first — this pilot refuses to run against a shared Notepad process."
+        % [p.pid for p in procs]
+    )
+
+# 2) Start our own process and wait for it.
 app = Application(backend="uia").start("notepad.exe")
-pid = app.process  # type: ignore[attr-defined]
-print(f"Started Notepad pid={pid}. {PID_NOTE}")
+pid = app.process
+print(f"Started Notepad pid={pid} (fresh, no other Notepad was running).")
 
 dlg = app.top_window()
 dlg.wait("ready", timeout=10)
-
-# Type into only this window, via its handle.
 dlg.set_focus()
+time.sleep(0.3)
+
+# 3) Type, then READ THE TEXT BACK from this window's edit control.
 dlg.type_keys(FULL, with_spaces=True, pause=0.02)
 time.sleep(0.5)
-
-# READ THE TEXT BACK from this window's edit control; PASS depends on it.
 edit = dlg.child_window(control_type="Edit", found_index=0)
-readback = edit.get_value() if hasattr(edit, "get_value") else None
-if readback is None:
-    texts = [t for t in [c.window_text() for c in edit.iter_children()] if t]
-    readback = texts[0] if texts else None
-if readback is None and edit.element_info is not None:
-    readback = getattr(edit.element_info, "value", None) or (
-        getattr(edit.element_info, "name", None)
-    )
-if readback is None or FULL not in str(readback):
-    print("FAIL: could not read the typed text back from the edit control.")
-    print(f"  readback={readback!r}")
-    print("  Notepad left open for inspection. Close it manually (Don't Save).")
-    raise SystemExit(1)
-print("Read-back verified:", readback[:60], "...")
-
-# Screenshot ONLY this window's rectangle.
-rect = dlg.rectangle()
-shot = ImageGrab.grab(
-    bbox=(rect.left, rect.top, rect.right, rect.bottom), all_screens=True
-)
-import os
-
-desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-if not os.path.isdir(desktop):  # OneDrive / localized fallback
-    desktop = os.path.expanduser("~")
-out = os.path.join(desktop, "piwin_pilot.png")
-shot.save(out)
-print("Window-only screenshot saved:", out)
-
-# Close THIS window only; if a save prompt appears for it, answer Don't Save.
-dlg.close()
-time.sleep(0.5)
-for _ in range(3):
-    if not app.windows():
-        break
-    save_dlg = None
-    for w in app.windows():
-        if "save" in (w.window_text() or "").lower():
-            save_dlg = w
+readback = None
+for getter in (
+    lambda: edit.get_value(),
+    lambda: getattr(edit.element_info, "value", None),
+):
+    try:
+        v = getter()
+        if v:
+            readback = v
             break
-    if save_dlg is None:
-        # Classic prompt: button names vary by locale; find "Don't Save"-like button
-        for w in app.windows():
-            for b in w.children(control_type="Button"):
-                if "don" in (b.window_text() or "").lower() or "niet" in (
-                    b.window_text() or ""
-                ).lower():
-                    b.click_input()
-                    time.sleep(0.5)
-    else:
-        save_dlg.print_control_identifiers()
-    time.sleep(0.5)
+    except Exception:
+        continue
+if not readback or FULL not in str(readback):
+    fail(f"could not read typed text back (readback={readback!r}).")
 
-try:
-    app.kill(soft=False)  # last resort: only kills this pid's process
-except Exception:
-    pass
-print("PASS: typed, read back, screenshot, and closed pid", pid)
+# 4) Window-only screenshot.
+rect = dlg.rectangle()
+from PIL import ImageGrab
+
+ImageGrab.grab(
+    bbox=(rect.left, rect.top, rect.right, rect.bottom), all_screens=True
+).save(os.path.join(known_desktop(), "piwin_pilot.png"))
+
+# 5) Close only if this PID owns exactly one window; handle its Don't Save.
+wins = [w for w in Desktop(backend="uia").windows(process=pid)]
+if len(wins) != 1:
+    fail(f"pid {pid} owns {len(wins)} windows; expected exactly 1. Not closing.")
+dlg.close()
+time.sleep(0.8)
+for _ in range(6):
+    wins = [w for w in Desktop(backend="uia").windows(process=pid)]
+    if not wins:
+        break
+    prompt = wins[0]
+    answered = False
+    for b in prompt.children(control_type="Button"):
+        label = (b.window_text() or "").lower()
+        if "don" in label or "niet" in label or "speichern" in label and "nicht" in label:
+            b.click_input()
+            answered = True
+            break
+    if not answered:
+        for b in prompt.children(control_type="Button"):
+            if (b.window_text() or "").lower() in ("no", "não", "nein", "non"):
+                b.click_input()
+                answered = True
+                break
+    time.sleep(0.6)
+
+# 6) PASS only after the process is actually gone.
+gone = False
+for _ in range(20):
+    if not psutil.pid_exists(pid):
+        gone = True
+        break
+    try:
+        psutil.Process(pid).status()
+    except psutil.NoSuchProcess:
+        gone = True
+        break
+    time.sleep(0.5)
+if not gone:
+    fail(f"pid {pid} still exists after close attempts. Not printing PASS.")
+
+print("PASS: typed, read back, screenshot saved, and pid", pid, "is gone.")

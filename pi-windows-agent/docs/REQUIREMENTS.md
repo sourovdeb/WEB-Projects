@@ -15,21 +15,25 @@
   unless its serialized name+arguments hash-match an approval the operator
   clicked in the UI. Approval is of the call, not of a sentence. See
   `SAFETY-DISPATCHER.md`.
-- **Irreversible gate:** actions matching the irreversible keyword list —
-  `publish, upload, post, delete, send, save-over, install, format, pay` —
-  require a second, separate confirmation naming the exact target.
-- Dry-run is a process flag the model cannot clear. Irreversible matching runs
-  on real arguments (`publish, upload, post, delete, send, save-over, install,
-  format, pay, recycle, share, token-grant`) and needs a second confirm naming
-  the exact target. Jev highlights; it can never waive a confirm. A step the
+- **Irreversible control:** the form's action class (not keyword matching —
+  see SAFETY-DISPATCHER.md) decides which steps need a second confirmation
+  naming the exact target.
+- Dry-run is a flag outside the agent's reach. Irreversibility comes from the
+  form's action class (see SAFETY-DISPATCHER.md — keyword matching is
+  withdrawn) and needs a second confirm naming the exact target. Jev highlights; it can never waive a confirm. A step the
   operator didn't ask for is Removed by default — keeping it means editing the
   form so the step is explicitly theirs.
 
 ## 3. Primary interface — form-based UI (operator never writes code)
 
+> **v0.1 ships only the tested-app flow: build steps for ONE app on
+> tested-apps.json, approve each call in the UI, run.** The publish checkbox,
+> second-model cross-check, and Playwright items below are deferred design
+> (§3c); they are not current behavior.
+
 - A local desktop-style app window (served on localhost only, no external access)
   where the operator builds a task as a **form**:
-  - Pick application (dropdown of detected apps: video editor, browser, other)
+  - Pick application (dropdown of apps on the tested-apps.json list)
   - Pick action steps (click-to-add: open file, cut clip, export, upload/publish…)
   - Fill fields (file paths via file picker, text via text boxes, choices via dropdowns)
   - Click **Run**.
@@ -40,22 +44,20 @@
 - No terminal, no code, no config files for the operator at any point.
 - A free-text box is still available for anything the form can't express; if the
   text is ambiguous, the UI shows the single clarifying question as a form too.
-- A checkbox: **"Cross-check result with another AI when done"** — after the task,
-  Jev verifies the run log and, if flagged, a configured second AI (e.g. Mistral
-  Vibe) suggests fixes, shown as a plain-language report card. See
-  `JEV-INTEGRATION.md`.
+- DEFERRED: a checkbox "Cross-check result with another AI when done" (see §3c
+  and JEV-INTEGRATION.md). Not in v0.1.
 
-## 3b. Target capabilities
+## 3b. Target capabilities (v0.1 scope)
 
 - Control windows that expose a **usable UI Automation tree** — each app is
   added to a `tested-apps.json` list only after a recorded pilot run against
   it. Custom-rendered UIs (Shotcut timeline, games) are documented as
   unsupported where that proves true.
-- Video editing by clicking the app's real UI (operator names the app in the form).
-- Web browser use and publishing flows via scriptable browser automation
-  (Playwright) where possible; GUI clicking as fallback for non-scriptable apps.
-- Terminal collaboration with Mistral Vibe via a shared STATE file handoff
-  (background mode for advanced use; the UI is the default).
+- v0.1: list windows/controls, window-only screenshot, approved click/type
+  in ONE tested app.
+- DEFERRED (§3c): video editing flows, browser automation, publish flows,
+  and the agent-handoff collaboration channel (gitignored data-only
+  state.json per STATE.example.md — never a committed instruction file).
 
 ## 3c. Everything is a step scaffold (added per operator, v0.2 — DEFERRED past v0.1 gate)
 
@@ -90,8 +92,8 @@ Not just editing — **every task** is built from the same step-scaffold GUI:
 - **Service integrations — Gmail, YouTube, WordPress** — each usable via two
   modes the operator picks per step: **MCP** (managed connector, e.g. a
   WordPress MCP server) or **API** (direct key-based). Connection screens are
-  forms (paste key / sign in once); credentials stored only in Pi's
-  `auth.json` / OS key store, gitignored.
+  forms (paste key / sign in once); credentials stored ONLY in the OS key store (Windows Credential
+  Manager), never in the repo.
 - **Save and test:** any composed step sequence (or single step) can be
   **saved as a template** ("My YouTube upload") and **tested on demand** —
   a dry-run that walks the real UI and reports what it *would* do, with no
@@ -115,7 +117,8 @@ Not just editing — **every task** is built from the same step-scaffold GUI:
 ## 6. Open source
 
 - Repo carries an open-source LICENSE; no secrets ever committed
-  (`auth.json`, API keys excluded via `.gitignore`).
+  (API keys and token files excluded via `.gitignore`; live credentials only in
+  the OS key store).
 
 ## Approval
 

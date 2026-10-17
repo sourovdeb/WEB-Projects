@@ -14,6 +14,17 @@ blocked direct fetch; Pi docs VERIFIED-LIVE):
 So in PiWin: **Jev verifies and flags; a chat AI (Vibe or any added model)
 suggests solutions where Jev flags a problem.** Jev never writes the fixes.
 
+> **STATUS: DEFERRED DESIGN.** None of this ships in v0.1 (see
+> SAFETY-DISPATCHER.md, the sole authority). Jev highlights only; it can never
+> waive a confirm; probability under threshold means ASK, never "go ahead";
+> ambiguity check asks unless the task is clearly complete (default = ask).
+> Unrequested steps are Removed by default — "mechanical necessity" is not a
+> justification anywhere. Screenshots are cropped to the target window and are
+> NOT sent to Jev or any second model unless the operator opts in per task.
+> Fix suggestions, when they exist, are delivered through the UI as clickable
+> report rows — never through a shared state file. This file describes the
+> post-gate design only.
+
 ## Where it plugs in (four integration points)
 
 ### 1. Ambiguity check (before planning) — enforces the no-decision rule
@@ -26,8 +37,9 @@ question: is_ambiguous (bool)
   false: "Every step can be executed literally as specified"
 ```
 
-If `probability(true) > 0.5` → the UI shows the single clarifying question form.
-Pi is *never* allowed to resolve the ambiguity itself.
+Default is ASK. Only `probability(false)` above a high threshold set by the
+operator (default 0.9) skips the question. Pi is never allowed to resolve
+ambiguity itself.
 
 ### 2. Plan conformance check (before each approval)
 
@@ -35,12 +47,13 @@ The step plan Pi produced is sent as `state`; for each step Jev answers:
 
 ```
 question: matches_request (bool)
-  true:  "This step is explicitly requested or a mechanical necessity of the request"
+  true:  "This step is explicitly requested by the operator's form"
   false: "This step goes beyond or contradicts the request"
 ```
 
-Any step below threshold is highlighted red in the UI checklist with the
-probability shown — the operator decides, not the model.
+Any flagged step is Removed by default; keeping it requires the operator to
+edit the form so the step is explicitly theirs. Jev highlights; the operator
+decides; the model never does.
 
 ### 3. Irreversible-action confirmation aid
 
@@ -53,20 +66,22 @@ question: risk (score)
 ```
 
 The UI uses the score to size the confirmation dialog (from a simple confirm up
-to showing a dry-run preview first).
+to showing a dry-run preview first). The irreversible decision itself comes
+from the form's action class (SAFETY-DISPATCHER.md), not from Jev.
 
 ### 4. Post-task cross-reference (operator-enableable option)
 
 A checkbox in the task form: **"Cross-check result with another AI when done."**
 
 - On task completion, PiWin assembles a run log (request, plan, each step's
-  JSON result, screenshots) as `state`.
+  JSON result, target-window-only screenshots, opt-in) as `state`.
 - Jev answers `bool`: "The run log shows every requested step completed
   successfully and nothing else was done."
 - If flagged (or confidence low) and a second AI is configured, the run log is
-  handed to that AI (e.g., Mistral Vibe via the shared STATE file / a second Pi
-  model entry) which **suggests solutions** — shown in the UI as a plain-language
-  report card with Fix suggestions. The operator clicks to accept any fix.
+  handed to that AI (a second Pi model entry) which **suggests solutions** —
+  shown in the UI as a plain-language report card with Fix suggestions. The
+  operator clicks to accept any fix, which runs as a new task through the same
+  dispatcher guard. No shared state file is involved.
 
 This is the Mistral Vibe + Pi + Jev triangle: Pi executes, Jev verifies,
 Vibe (or any added model) proposes fixes.
