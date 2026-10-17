@@ -115,8 +115,8 @@
 
     <div class="tabs">
       <button class="on">① Build</button>
-      <button onclick="showRun()">② Review &amp; Run</button>
-      <button onclick="showReport()">③ Report (example)</button>
+      <button data-tab="run" onclick="show('run')">② Review &amp; Run</button>
+      <button data-tab="report" onclick="show('report')">③ Report (example)</button>
     </div>
 
     <div class="panel">
@@ -138,7 +138,7 @@
 
       <div class="step">
         <div class="head"><div class="num">1</div><div><div class="sname">✂️ Trim clip</div></div>
-          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon" onclick="del(this)">✕</button></div></div>
         <div class="sdesc">Cut 0:00 – 1:30 · keep the rest</div>
         <div class="assist" style="display:none">
           <div class="t">⚠ If there's a problem… (your references &amp; alternatives)</div>
@@ -149,7 +149,7 @@
 
       <div class="step">
         <div class="head"><div class="num">2</div><div><div class="sname">🎵 Add music</div></div>
-          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon" onclick="del(this)">✕</button></div></div>
         <div class="sdesc">intro.mp3 · start 0:00 · fade out at 0:10 · volume 40%</div>
         <div class="assist" style="display:none">
           <div class="t">⚠ If there's a problem… (your references &amp; alternatives)</div>
@@ -160,7 +160,7 @@
 
       <div class="step">
         <div class="head"><div class="num">3</div><div><div class="sname">💾 Export video</div></div>
-          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon" onclick="del(this)">✕</button></div></div>
         <div class="sdesc">Preset: YouTube 1080p → C:\Users\you\Desktop (picked by you)</div>
         <div class="assist" style="display:none">
           <div class="t">⚠ If there's a problem…</div>
@@ -170,7 +170,7 @@
 
       <div class="step">
         <div class="head"><div class="num">4</div><div><div class="sname">▶ Publish to YouTube</div></div>
-          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon">✕</button></div></div>
+          <div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon" onclick="del(this)">✕</button></div></div>
         <div class="sdesc">In open browser · Title: "My Gameplay #12" · Visibility: Unlisted · via: MCP</div>
         <div class="assist" style="display:none">
           <div class="t">⚠ If there's a problem…</div>
@@ -179,9 +179,9 @@
       </div>
 
       <div class="steps-add">
-        <button>+ Trim</button><button>+ Music</button><button>+ Text overlay</button><button>+ Transition</button>
-        <button>+ Export</button><button>+ Publish</button><button>+ Email (Gmail)</button>
-        <button>+ WordPress post</button><button>+ Recycle / cleanup</button><button>+ Custom step…</button>
+        <button onclick="addStep(this)">+ Trim</button><button onclick="addStep(this)">+ Music</button><button onclick="addStep(this)">+ Text overlay</button><button onclick="addStep(this)">+ Transition</button>
+        <button onclick="addStep(this)">+ Export</button><button onclick="addStep(this)">+ Publish</button><button onclick="addStep(this)">+ Email (Gmail)</button>
+        <button onclick="addStep(this)">+ WordPress post</button><button onclick="addStep(this)">+ Recycle / cleanup</button><button onclick="addStep(this)">+ Custom step…</button>
       </div>
     </div>
 
@@ -212,9 +212,9 @@
     <div class="sub">Jev checked every step against your form. Red = something beyond your request — you decide.</div>
 
     <div class="tabs">
-      <button onclick="showBuild()">① Build</button>
+      <button data-tab="build" onclick="show('build')">① Build</button>
       <button class="on">② Review &amp; Run</button>
-      <button onclick="showReport()">③ Report (example)</button>
+      <button data-tab="report" onclick="show('report')">③ Report (example)</button>
     </div>
 
     <div class="confirm" style="border-color:rgba(239,91,91,.5);background:rgba(239,91,91,.07)">
@@ -246,8 +246,8 @@
     <div class="sub">Everything finished — verified by Jev, fixes (if any) suggested by Mistral Vibe.</div>
 
     <div class="tabs">
-      <button onclick="showBuild()">① Build</button>
-      <button onclick="showRun()">② Review &amp; Run</button>
+      <button data-tab="build" onclick="show('build')">① Build</button>
+      <button data-tab="run" onclick="show('run')">② Review &amp; Run</button>
       <button class="on">③ Report (example)</button>
     </div>
 
@@ -272,9 +272,19 @@
 
 <script>
 function tog(b){const a=b.closest('.step').querySelector('.assist');a.style.display=a.style.display==='none'?'block':'none';}
-function showBuild(){document.getElementById('build').style.display='block';document.getElementById('run').style.display='none';document.getElementById('report').style.display='none';}
-function showRun(){showBuild();document.getElementById('build').style.display='none';document.getElementById('run').style.display='block';}
-function showReport(){showBuild();document.getElementById('build').style.display='none';document.getElementById('report').style.display='block';}
+function del(b){if(confirm('Remove this step from the task?'))b.closest('.step').remove();renumber();}
+let stepno=5;
+function addStep(b){stepno++;const d=document.createElement('div');d.className='step';d.innerHTML='<div class="head"><div class="num">'+stepno+'</div><div><div class="sname">'+b.textContent.replace('+ ','')+'</div></div><div class="right"><button class="icon" onclick="tog(this)">▾</button><button class="icon" onclick="del(this)">✕</button></div></div><div class="sdesc">(new step — fill its fields)</div><div class="assist" style="display:none"><div class="t">⚠ If there\'s a problem… (your references &amp; alternatives)</div><textarea></textarea></div>';
+document.querySelector('.panel .step').parentNode.insertBefore(d,document.querySelector('.steps-add'));
+renumber();}
+function renumber(){document.querySelectorAll('.step .num').forEach((n,i)=>n.textContent=i+1);}
+function approve(b){const r=b.closest('.rstep');b.parentNode.remove();r.querySelector('.res').className='res ok';r.querySelector('.res').textContent='approved — waiting';}
+const TABS=[['build','① Build'],['run','② Review & Run'],['report','③ Report (example)']];
+function show(id){['build','run','report'].forEach(x=>document.getElementById(x).style.display=x===id?'block':'none');
+document.querySelectorAll('.tabs').forEach(t=>{[...t.children].forEach((btn,i)=>btn.classList.toggle('on',t.children[i].dataset.tab===id));});}
+function showBuild(){show('build')}
+function showRun(){show('run')}
+function showReport(){show('report')}
 </script>
 </body>
 </html>
