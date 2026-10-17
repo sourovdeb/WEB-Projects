@@ -4,9 +4,13 @@
 
 ```
 Operator (you)
-   │ typed approvals
+   │ form input + click Approve/Stop
    ▼
-Pi (terminal agent, native Windows, powershell tool)
+PiWin UI (localhost web app in a desktop window — the ONLY default interface)
+   │ task form → JSON task; approvals via buttons, not typing
+   ▼
+Pi (agent, driven headless via Pi's RPC mode; terminal remains a background option)
+   │ loads extensions
    │ loads extensions
    ├── piwin-gate/        authorization gate extension (TypeScript, Pi SDK)
    │      └── intercepts every ui.* call → shows plan → waits for "y"
@@ -25,14 +29,20 @@ piwin-helper/  (Python, runs on Windows)
 
 ## Flow
 
-1. Operator gives a task in Pi's terminal.
+1. Operator opens the PiWin app window and builds the task as a form
+   (app picker, step picker, file pickers) or types free text; clicks **Run**.
 2. Pi (with project instructions) produces a literal step plan; if ambiguous it
-   asks one question and stops.
-3. Gate extension prints the plan; operator types `y`.
+   returns the single clarifying question, shown in the UI as a form.
+3. The UI shows the plan as a live checklist; operator clicks **Approve** per step
+   (or **Stop**).
 4. `ui.*` tools drive the target application; each call returns JSON
-   (success/fail, screenshot path) so the model verifies its own actions.
-5. Irreversible keywords trigger a second confirmation naming the exact target.
+   (success/fail, screenshot) which the UI displays in plain language.
+5. Irreversible keywords trigger a second confirmation in the UI naming the exact
+   target.
 6. Results and handoff state are written to `docs/STATE.md` for Vibe collaboration.
+
+The operator never opens a terminal, editor, or config file. Setup (installing
+Pi, model login) is done once by the build agent and packaged into an installer.
 
 ## Model configuration
 

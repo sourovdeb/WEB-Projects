@@ -2,7 +2,8 @@
 
 A personal, open-source Windows assistant built on [Pi](https://pi.dev) that operates
 any application on your PC by clicking and typing like a human — but only with your
-explicit authorization.
+explicit authorization. **You use it through a simple form: pick your app, pick the
+steps, click Run, click Approve. You never write code.**
 
 ## Core rules
 
