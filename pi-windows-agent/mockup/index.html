@@ -218,9 +218,9 @@
     </div>
 
     <div class="confirm" style="border-color:rgba(239,91,91,.5);background:rgba(239,91,91,.07)">
-      <b>Jev flag 78%:</b> Step 5 "Add end screen" — not in your form. &nbsp;
-      <button class="btn-ok" style="padding:4px 10px">Keep</button>
-      <button class="btn-stop" style="padding:4px 10px">Remove</button>
+      <b>Jev flag 78%:</b> Step 5 "Add end screen" was not in your form — steps you did not ask for are <b>removed by default</b>. To keep it, edit the form so it is explicitly yours. &nbsp;
+      <button class="btn-ok" style="padding:4px 10px">Remove (default)</button>
+      <button class="btn-stop" style="padding:4px 10px">Edit form to keep it</button>
     </div>
 
     <div class="bar">
@@ -231,8 +231,8 @@
 
     <div class="rstep"><div class="dot done">✓</div><div>1. Trim clip — cut 0:00–1:30 in Shotcut</div><div class="res ok">done · screenshot</div></div>
     <div class="rstep"><div class="dot act">…</div><div>2. Add music — intro.mp3 at 0:00</div><div class="res">working…</div></div>
-    <div class="rstep"><div class="dot wait">3</div><div>3. Export video → Desktop</div><div class="gate"><button class="btn-sec" style="padding:5px 10px">Approve</button></div></div>
-    <div class="rstep"><div class="dot wait">4</div><div>4. Publish to YouTube (Unlisted)</div><div class="gate"><button class="btn-sec" style="padding:5px 10px">Approve</button></div></div>
+    <div class="rstep"><div class="dot wait">3</div><div>3. Export video → Desktop</div><div class="res"></div><div class="gate"><button class="btn-sec" style="padding:5px 10px" onclick="approve(this)">Approve</button></div></div>
+    <div class="rstep"><div class="dot wait">4</div><div>4. Publish to YouTube (Unlisted)</div><div class="res"></div><div class="gate"><button class="btn-sec" style="padding:5px 10px" onclick="approve(this)">Approve</button></div></div>
 
     <div class="confirm">
       <b>Step 4 needs your confirmation:</b> "About to publish <b>My Gameplay #12</b> as <b>Unlisted</b> to your channel.
@@ -278,7 +278,7 @@ function addStep(b){stepno++;const d=document.createElement('div');d.className='
 document.querySelector('.panel .step').parentNode.insertBefore(d,document.querySelector('.steps-add'));
 renumber();}
 function renumber(){document.querySelectorAll('.step .num').forEach((n,i)=>n.textContent=i+1);}
-function approve(b){const r=b.closest('.rstep');b.parentNode.remove();r.querySelector('.res').className='res ok';r.querySelector('.res').textContent='approved — waiting';}
+function approve(b){const r=b.closest('.rstep');const gate=b.parentNode;const res=r.querySelector('.res');gate.remove();if(res){res.className='res ok';res.textContent='approved — waiting';}}
 const TABS=[['build','① Build'],['run','② Review & Run'],['report','③ Report (example)']];
 function show(id){['build','run','report'].forEach(x=>document.getElementById(x).style.display=x===id?'block':'none');
 document.querySelectorAll('.tabs').forEach(t=>{[...t.children].forEach((btn,i)=>btn.classList.toggle('on',t.children[i].dataset.tab===id));});}

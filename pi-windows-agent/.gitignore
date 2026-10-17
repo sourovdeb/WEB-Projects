@@ -3,3 +3,9 @@ auth.json
 .env
 __pycache__/
 node_modules/
+*.png
+screenshots/
+state.json
+playwright-storage/
+*.token.json
+tested-apps-local.json

@@ -1,4 +1,4 @@
-# PiWin Requirements (v0.1 — awaiting operator approval, Gate G1)
+# PiWin Requirements (v0.2 — SCOPE FROZEN at dispatcher-gate milestone; see SAFETY-DISPATCHER.md)
 
 ## 1. The no-decision rule
 
@@ -10,13 +10,20 @@
 
 ## 2. Authorization gates
 
-- **Batch gate:** before any GUI action batch runs, PiWin displays the plan
-  (target app, action, arguments) and waits for the operator to type `y`.
+- **Dispatcher guard (the one gate):** every side-effecting tool call —
+  `ui.*`, `powershell`, `bash`, `edit`, `write`, MCP, Playwright — is blocked
+  unless its serialized name+arguments hash-match an approval the operator
+  clicked in the UI. Approval is of the call, not of a sentence. See
+  `SAFETY-DISPATCHER.md`.
 - **Irreversible gate:** actions matching the irreversible keyword list —
   `publish, upload, post, delete, send, save-over, install, format, pay` —
   require a second, separate confirmation naming the exact target.
-- Default is **dry-run**: when a plan has an irreversible step, the first run
-  shows what would happen without doing it.
+- Dry-run is a process flag the model cannot clear. Irreversible matching runs
+  on real arguments (`publish, upload, post, delete, send, save-over, install,
+  format, pay, recycle, share, token-grant`) and needs a second confirm naming
+  the exact target. Jev highlights; it can never waive a confirm. A step the
+  operator didn't ask for is Removed by default — keeping it means editing the
+  form so the step is explicitly theirs.
 
 ## 3. Primary interface — form-based UI (operator never writes code)
 
@@ -40,15 +47,23 @@
 
 ## 3b. Target capabilities
 
-- Control **any application** on the operator's PC (window discovery, click,
-  type, read screen) — app-agnostic, via Windows UI Automation.
+- Control windows that expose a **usable UI Automation tree** — each app is
+  added to a `tested-apps.json` list only after a recorded pilot run against
+  it. Custom-rendered UIs (Shotcut timeline, games) are documented as
+  unsupported where that proves true.
 - Video editing by clicking the app's real UI (operator names the app in the form).
 - Web browser use and publishing flows via scriptable browser automation
   (Playwright) where possible; GUI clicking as fallback for non-scriptable apps.
 - Terminal collaboration with Mistral Vibe via a shared STATE file handoff
   (background mode for advanced use; the UI is the default).
 
-## 3c. Everything is a step scaffold (added per operator, v0.2)
+## 3c. Everything is a step scaffold (added per operator, v0.2 — DEFERRED past v0.1 gate)
+
+> **Scope freeze:** v0.1 ships the dispatcher guard + ONE tested local app.
+> Gmail, YouTube, WordPress, MCP/API, skills execution, and the second-model
+> cross-check are deferred until the gate passes; they are designed here so the
+> guard retrofits cleanly. OAuth/off-machine actions are a separate product
+> phase.
 
 Not just editing — **every task** is built from the same step-scaffold GUI:
 

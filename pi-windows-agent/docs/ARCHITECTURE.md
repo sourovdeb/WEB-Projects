@@ -9,11 +9,12 @@ Operator (you)
 PiWin UI (localhost web app in a desktop window — the ONLY default interface)
    │ task form → JSON task; approvals via buttons, not typing
    ▼
-Pi (agent, driven headless via Pi's RPC mode; terminal remains a background option)
-   │ loads extensions
-   │ loads extensions
-   ├── piwin-gate/        authorization gate extension (TypeScript, Pi SDK)
-   │      └── intercepts every ui.* call → shows plan → waits for "y"
+Pi (agent, driven headless via the Pi SDK in-process; terminal remains a background option)
+   ├── piwin-gate/        DISPATCHER GUARD (see SAFETY-DISPATCHER.md)
+      └── tool_call hook: blocks EVERY side-effecting call (ui.*, powershell,
+           bash, edit, write, MCP, Playwright) unless its serialized name+args
+           hash-match an approval made in the UI; re-checks the target window
+           at execution time
    ├── piwin-ui/          GUI tools extension (TypeScript, Pi SDK)
    │      └── shells out to helper (below), returns JSON + screenshot path
    │           ui.find_window  ui.list_windows  ui.list_controls
@@ -58,7 +59,12 @@ Pi runs with a Mistral model (`/login` or OpenAI-compatible entry in
 
 ## Safety posture
 
-- Pi does not sandbox tool calls (verified from Pi docs). PiWin therefore treats
-  the operator's typed approval as the only and sufficient guard.
+- Pi does not sandbox tool calls (verified from Pi docs). The **dispatcher guard
+  (SAFETY-DISPATCHER.md) is the guard** — code-enforced at the tool-call boundary,
+  covering every side-effecting tool. The operator's approval is bound to the
+  serialized call hash, not to a sentence. Prompt instructions and Jev are
+  advisory only and can never waive a confirm.
 - No network listeners, no remote control, no background services.
-- Credentials live only in Pi's `auth.json` (gitignored).
+- Credentials live in the OS key store (Windows Credential Manager); never in
+  the repo. Screenshots are cropped to the target window and never sent to
+  cloud models by default.

@@ -20,6 +20,7 @@ steps, click Run, click Approve. You never write code.**
 
 ## Architecture
 
+- **Dispatcher guard first** — safety is enforced in code at the tool-call boundary, covering every side-effecting tool (`ui.*`, `powershell`, `bash`, `edit`, `write`, MCP, Playwright). See `docs/SAFETY-DISPATCHER.md`.
 - **Pi core** — terminal agent, run natively on Windows with the `powershell` tool.
 - **PiWin GUI helper** — app-agnostic Windows GUI control (find window, click, type,
   screenshot, list controls) exposed to Pi as `ui.*` tools via a Pi extension.
@@ -30,8 +31,8 @@ steps, click Run, click Approve. You never write code.**
 - **Vibe collaboration** — shared `docs/STATE.md` handoff so Pi and Mistral Vibe work
   together in the terminal.
 
-See `docs/ARCHITECTURE.md` and `docs/REQUIREMENTS.md` for the full design.
+See the `docs/` folder (`SAFETY-DISPATCHER.md`, `ARCHITECTURE.md`, `REQUIREMENTS.md`, `JEV-INTEGRATION.md`) for the full design.
 
 ## Status
 
-Planning phase — see the workflow spec in this repo's PR.
+Planning spike. **Do not build on this yet** — v0.1 scope is frozen at the dispatcher-guard milestone: one tested local app, pilot verified by read-back, before any publish/MCP/second-model work.

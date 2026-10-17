@@ -1,35 +1,30 @@
-# PiWin GUI-Control Pilot (Step 6 / Gate G2)
+# PiWin GUI-Control Pilot (Step 6 / Gate G2) — v2
 
-**Goal:** prove Windows GUI control on YOUR PC before we build anything on top of it.
-Two independent options; run Option A first. Everything here is a one-time test.
+One script: `pilot.py`. Run it on your Windows PC.
 
-## Option A — Python + pywinauto (recommended)
+```
+pip install pywinauto pillow
+python pilot.py
+```
 
-1. Install Python from python.org (check "Add to PATH" during install).
-2. Open a Command Prompt and run:
-   ```
-   pip install pywinauto pillow
-   ```
-3. Save `pilot_a.py` (in this folder) to your Desktop.
-4. Double-click `pilot_a.py` (or run `python pilot_a.py`).
+**What it does:** opens ONE Notepad process, types "PiWin pilot OK - <timestamp>"
+into that window, **reads the text back from that window** to verify, saves a
+**screenshot of that window only**, then closes that window (answering Don't Save
+on its own prompt if one appears). It never touches other Notepad windows and
+never closes them. If read-back fails, it prints FAIL and leaves the window open.
 
-**What you should see:** Notepad opens, the text
-`PiWin pilot OK - <timestamp>` is typed into it, and a screenshot
-`piwin_pilot.png` appears on your Desktop. The script closes Notepad without saving.
+**PASS means:** the console prints `Read-back verified: ...` and then
+`PASS: typed, read back, screenshot, and closed pid <pid>` — in that order.
+A PASS printed before cleanup is not a pass.
 
-## Option B — PowerShell + Windows UI Automation (no install)
+**This proves:** UI Automation can drive and read back classic Notepad on your
+machine. It does NOT prove "any application" — Shotcut's timeline, games, and
+some custom-rendered UIs expose no usable UI Automation tree. After this pilot,
+Gate G2 additionally requires a second run against your actual target app, which
+is added to a tested-app list.
 
-1. Save `pilot_b.ps1` (in this folder) to your Desktop.
-2. Right-click it → **Run with PowerShell**.
-   (If blocked: open PowerShell, `cd Desktop`, `powershell -ExecutionPolicy Bypass -File .\pilot_b.ps1`)
+## Notes
 
-**What you should see:** Notepad opens and the same text is typed into it.
-
-## Report back
-
-Tell me which option(s) ran and what happened — copy any error text. If both fail,
-we stop (kill criterion for this phase) and reconsider.
-
-## Safety
-
-Both scripts only touch Notepad, never save anything, and close it afterward.
+- The old `pilot_a.py`, `pilot_b.ps1` and their instructions were removed:
+  pilot_b never typed anything (SendKeys -Keys is not a PowerShell cmdlet),
+  closed every notepad process, and told you to bypass execution policy.
