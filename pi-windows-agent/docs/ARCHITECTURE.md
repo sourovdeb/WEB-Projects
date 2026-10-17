@@ -10,11 +10,12 @@ PiWin UI (localhost web app in a desktop window — the ONLY default interface)
    │ task form → JSON task; approvals via buttons, not typing
    ▼
 Pi (agent, driven headless via the Pi SDK in-process; terminal remains a background option)
-   ├── piwin-gate/        DISPATCHER GUARD (see SAFETY-DISPATCHER.md)
-      └── tool_call hook: blocks EVERY side-effecting call (ui.*, powershell,
-           bash, edit, write, MCP, Playwright) unless its serialized name+args
-           hash-match an approval made in the UI; re-checks the target window
-           at execution time
+   v0.1 tool inventory (SAFETY-DISPATCHER.md):
+     DENY    powershell, bash, edit, write, MCP, Playwright — denied outright
+     APPROVE ui.* calls only — UI-host-minted hash approval + per-launch
+             helper token; target window re-checked at execution
+     ALLOW   read-only tools (read, list windows/controls, window screenshot)
+   ├── piwin-gate/        tool_call hook + helper token check (BOTH enforce)
    ├── piwin-ui/          GUI tools extension (TypeScript, Pi SDK)
    │      └── shells out to helper (below), returns JSON + screenshot path
    │           ui.find_window  ui.list_windows  ui.list_controls

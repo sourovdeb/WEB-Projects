@@ -57,7 +57,8 @@ decides; the model never does.
 
 ### 3. Irreversible-action confirmation aid
 
-For steps matching the irreversible keyword list, Jev scores:
+For steps whose form action class is irreversible (keyword lists are withdrawn;
+see SAFETY-DISPATCHER.md), Jev scores the risk for dialog sizing:
 
 ```
 question: risk (score)
@@ -117,8 +118,9 @@ renders the answers. Extensions can also call
 ## Caveats (documented, not hidden)
 
 - Jev's output is a schema guarantee, not a truth guarantee — it can pick the
-  wrong category. Thresholds default conservative (flag at ≥0.5) and every
-  flagged item goes to the human, never auto-blocked or auto-fixed.
+  wrong category. The default is ASK — anything not clearly above the
+  operator’s threshold (default 0.9) is treated as flagged, and every flagged
+  item goes to the human, never auto-blocked or auto-fixed.
 - Jev treats state as data; adversarial text can steer it (per TypeSafe's own
   notes). Irreversible gates therefore never depend on Jev alone — the human
   confirm stays mandatory.

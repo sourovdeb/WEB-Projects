@@ -1,30 +1,28 @@
-# PiWin GUI-Control Pilot (Step 6 / Gate G2) — v2
+# PiWin GUI-Control Pilot (Step 6) — v3
 
-One script: `pilot.py`. Run it on your Windows PC.
+One script: `pilot.py`. Run it on your Windows PC **with every Notepad window
+closed** — it refuses to start if any `notepad.exe` process exists, to avoid
+sharing a process with your unsaved work.
 
 ```
-pip install pywinauto pillow
+pip install pywinauto pillow psutil
 python pilot.py
 ```
 
-**What it does:** opens ONE Notepad process, types "PiWin pilot OK - <timestamp>"
-into that window, **reads the text back from that window** to verify, saves a
-**screenshot of that window only**, then closes that window (answering Don't Save
-on its own prompt if one appears). It never touches other Notepad windows and
-never closes them. If read-back fails, it prints FAIL and leaves the window open.
+Version pins (install exactly these; unpinned installs are not supported):
+`pywinauto==0.6.9`, `pillow==10.4.0`, `psutil==6.0.0`.
 
-**PASS means:** the console prints `Read-back verified: ...` and then
-`PASS: typed, read back, screenshot, and closed pid <pid>` — in that order.
-A PASS printed before cleanup is not a pass.
+**What it does:** opens ONE fresh Notepad process, types "PiWin pilot OK -
+<timestamp>" into it, reads the text back from that window to verify, saves a
+screenshot of that window only, then closes that window (handling its own
+Don't Save prompt) — but only if that PID owns exactly one window.
 
-**This proves:** UI Automation can drive and read back classic Notepad on your
-machine. It does NOT prove "any application" — Shotcut's timeline, games, and
-some custom-rendered UIs expose no usable UI Automation tree. After this pilot,
-Gate G2 additionally requires a second run against your actual target app, which
-is added to a tested-app list.
+**PASS means** the console ends with:
+`PASS: typed, read back, screenshot saved, and pid <pid> is gone.`
+PASS is printed only after psutil confirms the process no longer exists. Any
+`FAIL:` line means exactly what it says; the window is left as-is.
 
-## Notes
-
-- The old `pilot_a.py`, `pilot_b.ps1` and their instructions were removed:
-  pilot_b never typed anything (SendKeys -Keys is not a PowerShell cmdlet),
-  closed every notepad process, and told you to bypass execution policy.
+**Scope of a PASS:** it covers UI Automation driving classic Notepad on that
+machine, that run. It does NOT open Gate G2 for any second app (the target app
+needs its own recorded run), and it does not prove the dispatcher guard, which
+does not exist yet.

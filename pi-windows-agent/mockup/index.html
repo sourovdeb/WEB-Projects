@@ -219,7 +219,7 @@
 
     <div class="confirm" style="border-color:rgba(239,91,91,.5);background:rgba(239,91,91,.07)">
       <b>Jev flag 78%:</b> Step 5 "Add end screen" was not in your form — steps you did not ask for are <b>removed by default</b>. To keep it, edit the form so it is explicitly yours. &nbsp;
-      <button class="btn-ok" style="padding:4px 10px" onclick="this.closest('.confirm').remove()">Remove (default)</button>
+      <button class="btn-ok" style="padding:4px 10px" onclick="alert('Step 5 is removed from the plan. (Steps you did not ask for are removed by default.)')">Remove (default)</button>
       <button class="btn-stop" style="padding:4px 10px">Edit form to keep it</button>
     </div>
 
@@ -263,7 +263,7 @@
     <div class="panel">
       <h2>Fix suggestions (only if Jev flags something)</h2>
       <div class="fix">🔊 Music slightly loud at 0:45 — re-export at 35% volume? <button class="btn-ok" style="margin-left:auto;padding:5px 12px">Run fix</button><button class="btn-stop" style="padding:5px 12px">Ignore</button></div>
-      <div style="color:var(--mut);font-size:12px">Fixes run as new mini-tasks — same approvals apply.</div>
+      <div style="color:var(--mut);font-size:12px">Fixes run as new tasks through the dispatcher guard — same approvals apply.</div>
     </div>
   </div>
 

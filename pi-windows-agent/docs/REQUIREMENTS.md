@@ -8,13 +8,17 @@
 - Exactly one exception: when the operator's prompt is ambiguous, PiWin asks a
   single clarifying question and waits. It never resolves ambiguity by acting.
 
-## 2. Authorization gates
+## 2. Authorization gates (v0.1 tool inventory — identical to SAFETY-DISPATCHER.md)
 
-- **Dispatcher guard (the one gate):** every side-effecting tool call —
-  `ui.*`, `powershell`, `bash`, `edit`, `write`, MCP, Playwright — is blocked
-  unless its serialized name+arguments hash-match an approval the operator
-  clicked in the UI. Approval is of the call, not of a sentence. See
-  `SAFETY-DISPATCHER.md`.
+| Class | Tools | v0.1 policy |
+|---|---|---|
+| DENY | `powershell`, `bash`, `edit`, `write`, all file-writing tools, all MCP tools, Playwright | **Denied outright. Not approvable.** No hash approval exists for these in v0.1. |
+| APPROVE | `ui.*` calls minted by the UI host | Blocked unless hash-approved by the operator AND carrying the UI host's per-launch token (the helper refuses without it); target re-checked at execution. |
+| ALLOW | `read`, window/control listing, window screenshot | Read-only; no approval needed. |
+
+Approval is of the serialized call (canonical JSON in SAFETY-DISPATCHER.md),
+not of a sentence. Hash-approving shell/write/MCP/Playwright is not a v0.1
+behavior and must not be implemented.
 - **Irreversible control:** the form's action class (not keyword matching —
   see SAFETY-DISPATCHER.md) decides which steps need a second confirmation
   naming the exact target.

@@ -1,8 +1,6 @@
-import ctypes
 import os
 import sys
 import time
-from ctypes import wintypes
 
 import psutil  # pinned: psutil==6.0.0
 from pywinauto import Application, Desktop
@@ -14,23 +12,12 @@ STAMP = time.strftime("%Y-%m-%d %H:%M:%S")
 FULL = f"{TEXT} - {STAMP}"
 
 
-def known_desktop():
-    # Real Known Folder lookup (handles OneDrive / localized Desktop).
-    try:
-        class UUID(ctypes.Structure):
-            _fields_ = [("Data1", wintypes.DWORD), ("Data2", wintypes.WORD),
-                        ("Data3", wintypes.WORD), ("Data4", wintypes.BYTE * 8)]
-        buf = ctypes.c_wchar_p()
-        FOLDERID_Desktop = UUID(
-            0xB4BFCC3A, 0xDB9E, 0x4AE4,
-            (ctypes.c_ubyte * 8)(0x9B, 0x34, 0x34, 0xF6, 0x97, 0x05, 0x83, 0x50))
-        if ctypes.windll.shell32.SHGetKnownFolderPath(
-            ctypes.byref(FOLDERID_Desktop), 0, None, ctypes.byref(buf)
-        ) == 0:
-            return buf.value
-    except Exception:
-        pass
-    return os.path.join(os.path.expanduser("~"), "Desktop")
+def desktop_dir():
+    # NOTE: a Known Folder (SHGetKnownFolderPath) lookup was removed because its
+    # GUID could not be verified before running. ~/Desktop fallback only; if the
+    # screenshot is missing, check your home folder.
+    d = os.path.join(os.path.expanduser("~"), "Desktop")
+    return d if os.path.isdir(d) else os.path.expanduser("~")
 
 
 def fail(msg):
@@ -76,14 +63,17 @@ for getter in (
         continue
 if not readback or FULL not in str(readback):
     fail(f"could not read typed text back (readback={readback!r}).")
+print("Text verified in window:", str(readback)[:60], "...")
 
 # 4) Window-only screenshot.
 rect = dlg.rectangle()
 from PIL import ImageGrab
 
+out = os.path.join(desktop_dir(), "piwin_pilot.png")
 ImageGrab.grab(
     bbox=(rect.left, rect.top, rect.right, rect.bottom), all_screens=True
-).save(os.path.join(known_desktop(), "piwin_pilot.png"))
+).save(out)
+print("Window screenshot saved:", out)
 
 # 5) Close only if this PID owns exactly one window; handle its Don't Save.
 wins = [w for w in Desktop(backend="uia").windows(process=pid)]
@@ -99,13 +89,13 @@ for _ in range(6):
     answered = False
     for b in prompt.children(control_type="Button"):
         label = (b.window_text() or "").lower()
-        if "don" in label or "niet" in label or "speichern" in label and "nicht" in label:
+        if "don" in label or ("save" in label and ("don" in label or "nicht" in label)):
             b.click_input()
             answered = True
             break
     if not answered:
         for b in prompt.children(control_type="Button"):
-            if (b.window_text() or "").lower() in ("no", "não", "nein", "non"):
+            if (b.window_text() or "").lower() in ("no", "não", "nein", "non", "niet"):
                 b.click_input()
                 answered = True
                 break
