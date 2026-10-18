@@ -11,7 +11,7 @@ the repo carries a run result. Required exactly:
 
 1. PowerShell in `pi-windows-agent/pilot/` (run it yourself, not from an
    agent session).
-2. `python -m pip install pywinauto==0.6.9 pillow==10.4.0 psutil==6.0.0`
+2. `python -m pip install pywinauto==0.6.9 pillow==10.4.0`
    then `python pilot.py` (explicit `python` — `py` may point at a missing
    3.11; use the interpreter that has the packages).
 3. Do not type or click while it runs.
@@ -54,7 +54,7 @@ app for the second recorded run (`tested-apps.json`).
 | Pi gate `prototype/guard/piwin_gate.ts` | Spec-faithful sketch; loads only at assembly |
 | Tests `prototype/tests/` | **45 passing** (25 Python + 20 Node). Run from `prototype/`: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` |
 | Hash vectors `prototype/tests/hash_vectors.json` | Python-generated; Node suite reproduces all 7 — the cross-language check |
-| Pilot `pilot/pilot.py` (v5) | Pilot-owned top-level Win32 EDIT (CreateWindowExW, own pump thread; starts nothing else), focus-verified send (before+after), WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot. **py_compile-checked only — never executed anywhere** |
+| Pilot `pilot/pilot.py` (v5) | Pilot-owned top-level Win32 EDIT (CreateWindowExW on the pilot's own thread; starts nothing else), focus-verified send (before+after), WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot. **py_compile-checked only — never executed anywhere** |
 | Schema `docs/state.schema.json` | Committed; "schema-validated" is literal |
 | Docs | Internally consistent; DENY lists codemode; HANDOVER/README/provenance corrected |
 | Mockup `mockup/index.html` | Discussion artifact only |
