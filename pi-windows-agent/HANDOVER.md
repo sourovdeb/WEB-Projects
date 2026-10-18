@@ -1,4 +1,4 @@
-# PiWin — Vibe CLI Handover Note (v3, post-audit-fixes)
+# PiWin — Vibe CLI Handover Note (v4, post-probe-fixes)
 
 **Repo:** `sourovdeb/WEB-Projects`, branch `vibe/pi-windows-agent-79e5e7`
 **Tip:** see `git log -1` — the pilot and run doc change together; this line
@@ -54,7 +54,7 @@ app for the second recorded run (`tested-apps.json`).
 | Pi gate `prototype/guard/piwin_gate.ts` | Spec-faithful sketch; loads only at assembly |
 | Tests `prototype/tests/` | **45 passing** (25 Python + 20 Node). Run from `prototype/`: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` |
 | Hash vectors `prototype/tests/hash_vectors.json` | Python-generated; Node suite reproduces all 7 — the cross-language check |
-| Pilot `pilot/pilot.py` (v5) | Pilot-owned top-level Win32 EDIT (CreateWindowExW on the pilot's own thread; starts nothing else), focus-verified send (before+after), WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot. **py_compile-checked only — never executed anywhere** |
+| Pilot `pilot/pilot.py` (v5b) | Pilot-owned top-level Win32 EDIT (CreateWindowExW on the pilot's own thread; starts nothing else), same-thread foreground+focus checks before and after the send, WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot, clean process exit. **py_compile-checked only — never executed anywhere** |
 | Schema `docs/state.schema.json` | Committed; "schema-validated" is literal |
 | Docs | Internally consistent; DENY lists codemode; HANDOVER/README/provenance corrected |
 | Mockup `mockup/index.html` | Discussion artifact only |
@@ -64,6 +64,28 @@ app for the second recorded run (`tested-apps.json`).
 consistent but unwired to each other or to Pi; wiring happens only after a
 pilot PASS.
 
+## Probe record — why v5b exists (2026-10-18, operator's Windows PC)
+
+Two Win32 threading probes ran on the operator's PC (own off-screen EDIT
+windows, zero keystrokes, no other application touched). Findings against
+v5 (`c83f2d3`):
+
+1. v5 created its EDIT on a pump thread and called `SetFocus`/`GetFocus`
+   from the main thread. Probe: cross-thread `SetFocus` returned NULL and
+   `GetFocus()` returned a different window; the same-thread control passed.
+   Win32 focus is per-thread-queue, so v5's step-1 focus check could never
+   pass — guaranteed FAIL before a single keystroke.
+2. v5's non-daemon pump thread blocks in `GetMessageW` after the window is
+   destroyed (no `WM_QUIT` is posted). Probe: the process never exited and
+   had to be killed by timeout — v5 would print PASS, then hang forever.
+
+v5b (`d7b3e89`) creates the window on the pilot's own (main) thread and
+pumps with `PeekMessage` between steps: focus checks are same-thread and
+satisfiable, and the process exits cleanly. **Rule for future contributors:**
+do not move the pilot window to another thread unless the focus checks run
+on the owning thread (or `AttachThreadInput` is used) and the pump loop
+can exit.
+
 ## After the pilot output arrives
 
 - **PASS:** (1) implement `execute()` in the helper against pywinauto;
@@ -71,9 +93,9 @@ pilot PASS.
   (3) operator installs on their PC; (4) second recorded run against the
   operator's actual target app → `tested-apps.json`; (5) only then is any
   publish/MCP/second-model work discussable (still per the deferred design).
-- **FAIL (e.g. Win11 Notepad):** pick a new pilot app with a real UIA tree;
-  change nothing in the guard. The FAIL text names which check broke — that
-  decides the new target.
+- **FAIL:** change nothing in the guard. The FAIL text names which check
+  broke — that decides the next change (a different pilot target only if
+  the UIA tree itself proves unusable on this machine).
 
 ## Hard rules for any contributor or agent
 
@@ -101,6 +123,10 @@ pilot PASS.
 
 - Pi API claims: verified live against pi.dev docs.
 - TypeSafe Jev details: from search sources; UNVERIFIED until used.
-- **No PiWin code has executed on Windows.** The UIA engine is UNVERIFIED
-  until the operator's pilot runs. No PR exists; delivery is the pushed
-  branch. Unit tests ran on Linux in this sandbox.
+- **No PiWin code has executed on Windows** except two Win32 threading
+  probes (own off-screen windows, zero keystrokes — see the probe record
+  above). The pilot itself has never been executed anywhere; the UIA engine
+  is UNVERIFIED until the operator's pilot runs. No PR exists; delivery is
+  the pushed branch. Unit tests ran on Linux in this sandbox and were
+  re-run on the operator's Windows PC (25 Python + 20 Node, green both
+  times).
