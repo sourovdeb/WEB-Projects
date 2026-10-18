@@ -1,56 +1,51 @@
-# PiWin Pilot — Run Instructions (v4, audit-aligned)
+# PiWin Pilot — Run Instructions (v5, pilot-owned EDIT)
 
-**Project status:** the prototype exists (`prototype/`) — guard logic, UI
-host, and 45 passing unit tests — but is **unwired**: the input layer raises
-`NotPilotedYet` and nothing drives windows. This pilot is still the gate.
+**Run this yourself, on your Windows PC — not from an agent session, not on a
+machine with anything you can't afford to lose focus.** The pilot types into
+whatever window is foreground, after verifying its own window is foreground;
+while it runs, do not touch the keyboard or mouse.
 
-## What this pilot is
+## What this pilot is (and is not)
 
-The pilot drives a top-level Win32 EDIT control owned by a process the pilot
-started, verifies foreground+focus before and after sending keystrokes, reads
-the text back by exact equality (WM_GETTEXT, plus UIA where available), and
-closes only that window. **No dialog clicks** — if the window won't close,
-that's a FAIL, and the window stays for you to inspect.
+The pilot creates its **own top-level Win32 EDIT control** (CreateWindowExW on
+a dedicated pump thread). It does not start Notepad, does not touch any other
+process, sends keystrokes only after verifying foreground + keyboard focus
+(before and after), reads the text back by **exact equality via WM_GETTEXT
+AND UIA — both mandatory**, saves a best-effort screenshot (never gates the
+result), closes its own window, and prints PASS only after the window is
+verified gone. No dialogs, no button-label matching, no prompts.
 
-Compile-checked only. Its runtime behavior (pywinauto on a top-level EDIT,
-`get_value`) is **unverified until you run it**. A FAIL here is normal and
-useful; do not weaken the checks to force a pass.
+**It has never been executed anywhere (py_compile-checked only under
+3.12).** A FAIL is a real result; do not weaken any check to force a pass.
 
 ## Run
 
-1. Close every Notepad window, including taskbar ones (the pilot refuses if
-   `notepad.exe` is already running).
-2. Open PowerShell in the `pilot/` folder.
-3. Install pinned packages and run (explicit `python` path — `py` may default
-   to a Python 3.11 that isn't installed; use the interpreter that has the
-   packages):
+1. Open PowerShell in this `pilot/` folder.
+2. Install pinned packages and run (explicit `python` — `py` may default to a
+   missing 3.11; use the interpreter that has the packages):
    ```
-   python -m pip install pywinauto==0.6.9 psutil==6.0.0
+   python -m pip install pywinauto==0.6.9 pillow==10.4.0 psutil==6.0.0
    python pilot.py
    ```
-   If `python` isn't on PATH, try `py -3.12` or the full path to your Python.
-4. **Do not type or click while it runs** — keystrokes go to the foreground
-   window, and the pilot verifies its own window is foreground before typing.
-5. Read the last lines:
-   - `PASS: typed, read back, and closed pid ...` — this machine can drive
-     an EDIT control via UIA. Paste the output back.
-   - `FAIL: ...` — **stop, leave the window alone, paste the full console
-     text.** Every FAIL names exactly which check failed.
+3. Do not type or click until it finishes.
+4. Read the last lines:
+   - `PASS: typed, read back (both channels), closed.` — this machine's UIA
+     can drive and read back a Win32 EDIT. (Screenshot is best-effort; its
+     absence is not a failure.)
+   - `FAIL: ...` — stop; the pilot names exactly which check failed. Copy the
+     **full console text** and paste it back in the chat.
 
 ## Scope of a PASS
 
-This machine, this EDIT control, this run. A PASS does not open Gate G2 for
-any other app, does not prove the dispatcher end-to-end (unit tests prove the
-guard logic; the wiring does not exist yet), and does not make PiWin usable —
-`execute()` stays unimplemented until a PASS is in hand and the target app has
-its own recorded run.
+This machine, this EDIT control, this run. A PASS does not by itself open
+Gate G2 for your real target app (that app needs its own recorded run for
+`tested-apps.json`) and does not prove the dispatcher end-to-end — the guard's
+logic is unit-tested (45 passing); the wiring does not exist yet.
 
-## Honest gaps
+## After a PASS / FAIL
 
-- The pilot has never been executed anywhere (compile-checked only).
-- The helper and UI host use target field names (`window`/`control`) that
-  predate the audit; both are internally consistent but unwired to each other
-  or to Pi. Wiring happens only after the pilot passes.
-- Two ad-hoc artifacts at the repo root (`hash_cases.json`, `py_hashes.json`)
-  are leftovers; the authoritative vectors are
-  `prototype/tests/hash_vectors.json`.
+- **PASS:** the helper's `execute()` gets implemented against pywinauto; the
+  UI host, Pi gate, and helper get wired into an installable folder.
+- **FAIL:** the FAIL line names the broken step (window creation, focus,
+  typing, WM_GETTEXT, UIA read, close). That decides the next change; nothing
+  else gets touched.

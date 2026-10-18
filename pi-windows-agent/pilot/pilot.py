@@ -1,38 +1,45 @@
-"""PiWin pilot v4 — audit-aligned.
+"""PiWin pilot v5 — pilot-owned top-level Win32 EDIT.
 
-Design points (per the evidence audit):
-- The pilot owns its target: a top-level Win32 EDIT control created by this
-  process (not a Notepad tab, not a shared process). No dialog clicks, ever.
-- All imports happen BEFORE any window exists.
-- Keystrokes are sent ONLY after verifying the pilot's window is foreground and
-  focused — before AND after the send. No focus, no typing.
-- Read-back is exact-equality via WM_GETTEXT (Win32) and UIA Value pattern.
-  PASS requires BOTH to equal the expected text.
+Per the evidence audit: the pilot must NOT start notepad.exe (dead end: Win11
+Notepad raises a save prompt on close that the pilot refuses to answer, so it
+can never PASS). Instead the pilot creates its own top-level EDIT control via
+CreateWindowExW — it owns the window, so close is clean and prompt-free.
+
+Guarantees:
+- All imports happen before any window exists (a missing dependency fails
+  before anything is on screen).
+- Keystrokes are sent ONLY after verifying the pilot's window is foreground
+  and keyboard-focused — before AND after the send.
+- Read-back is exact-equality via WM_GETTEXT AND UIA Value — both mandatory.
 - PASS is printed only after the window is verified gone.
+- No dialogs, no button-label matching, no killing of any process.
+- Screenshot is best-effort only; it never gates PASS/FAIL.
 
-Status: compile-checked only. pywinauto is NOT installed in this Linux
-sandbox; the runtime behavior (wrapper on a top-level EDIT, get_value) is
-UNVERIFIED until the operator runs it on Windows. Do not treat this as proven.
+Status: py_compile-checked only (3.12). Never executed on Windows. The
+operator runs it per RUN-THIS.md — not an agent session.
 """
 import ctypes
-import ctypes.wintypes as wt
 import sys
 import time
 
-import psutil  # pinned: psutil==6.0.0
+import pywinauto  # pinned: pywinauto==0.6.9
+import psutil     # pinned: psutil==6.0.0
+from PIL import ImageGrab  # pinned: pillow==10.4.0 (best-effort screenshot only)
 from pywinauto import Desktop
-from pywinauto.application import Application
-
-# Tested with: pywinauto==0.6.9, psutil==6.0.0 — unpinned installs not supported.
-# (pillow not needed: no screenshot in this pilot version)
 
 WM_GETTEXT = 0x000D
 WM_GETTEXTLENGTH = 0x000E
-EXPECTED_SUFFIX = "PiWin pilot OK"
+WS_CHILD = 0x40000000
+WS_VISIBLE = 0x10000000
+WS_BORDER = 0x00800000
+ES_MULTILINE = 0x0004
+ES_AUTOVSCROLL = 0x0080
+
 STAMP = time.strftime("%Y-%m-%d %H:%M:%S")
-FULL = f"{EXPECTED_SUFFIX} - {STAMP}"
+FULL = f"PiWin pilot OK - {STAMP}"
 
 user32 = ctypes.windll.user32
+kernel32 = ctypes.windll.kernel32
 
 
 def fail(msg):
@@ -41,85 +48,120 @@ def fail(msg):
     sys.exit(1)
 
 
-def edit_text_hwnd(hwnd):
-    """Exact text via WM_GETTEXT on a raw EDIT hwnd."""
+def get_text_wm(hwnd):
     n = user32.SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0)
     buf = ctypes.create_unicode_buffer(n + 1)
     user32.SendMessageW(hwnd, WM_GETTEXT, n + 1, buf)
     return buf.value
 
 
-def main():
-    # 1) Refuse if anything could steal focus unpredictably: no notepad at all,
-    #    and the pilot requires no other windows to be relied upon.
-    procs = [p for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == "notepad.exe"]
-    if procs:
-        fail(f"notepad.exe already running (pids {[p.pid for p in procs]}); close it first")
+def _create_edit_window():
+    """Create a real top-level EDIT window on a dedicated thread with a
+    standard message pump, so Win32 focus/WM_GETTEXT semantics are exact."""
+    import threading
 
-    # 2) Start the pilot's own app and get ITS top-level window.
-    app = Application(backend="uia").start("notepad.exe")
-    pid = app.process
-    dlg = app.top_window()
-    dlg.wait("ready", timeout=10)
+    result = {}
 
-    # 3) Find the EDIT control of THIS window only.
-    try:
-        edit = dlg.child_window(control_type="Edit", found_index=0)
-    except Exception as e:
-        fail(f"no Edit control found in pid {pid} window: {e}")
+    def pump():
+        wc = ctypes.c_wchar_p("EDIT")
+        hwnd = user32.CreateWindowExW(
+            WS_BORDER, wc, None,
+            WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL,
+            100, 100, 600, 300,
+            None, None, kernel32.GetModuleHandleW(None), None,
+        )
+        result["hwnd"] = hwnd
+        msg = ctypes.wintypes.MSG()
+        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            user32.TranslateMessage(ctypes.byref(msg))
+            user32.DispatchMessageW(ctypes.byref(msg))
+        result["closed"] = True
 
-    # 4) Foreground + focus verification BEFORE sending keys.
-    hwnd = dlg.handle
+    t = threading.Thread(target=pump, daemon=False)
+    t.start()
+    deadline = time.time() + 5
+    while "hwnd" not in result and time.time() < deadline:
+        time.sleep(0.05)
+    if "hwnd" not in result or not result["hwnd"]:
+        fail("could not create pilot-owned EDIT window")
+    return result
+
+
+def run():
+    # 0) Guard: refuse if not Windows.
+    if sys.platform != "win32":
+        print("FAIL: pilot must run on Windows (user32 is Windows-only)")
+        sys.exit(1)
+
+    r = _create_edit_window()
+    hwnd = r["hwnd"]
+
+    # 1) Bring OUR window to foreground + verify keyboard focus.
+    user32.SetForegroundWindow(hwnd)
+    time.sleep(0.3)
     if user32.GetForegroundWindow() != hwnd:
-        dlg.set_focus()
-        time.sleep(0.3)
-    if user32.GetForegroundWindow() != hwnd:
-        fail("could not bring pilot window to foreground; not typing")
-
-    edit.set_focus()
+        fail("pilot window is not foreground; not typing")
+    user32.SetFocus(hwnd)
     time.sleep(0.2)
+    if user32.GetFocus() != hwnd:
+        fail("pilot window does not have keyboard focus; not typing")
 
-    # 5) Type into the EDIT.
-    edit.type_keys(FULL, with_spaces=True, pause=0.02)
+    # 2) Type via UIA wrapper on our own control.
+    try:
+        dlg = Desktop(backend="uia").window(handle=hwnd)
+        dlg.wait("ready", timeout=5)
+    except Exception as e:
+        fail(f"UIA wrapper on pilot EDIT failed: {e}")
+    try:
+        dlg.type_keys(FULL, with_spaces=True, pause=0.02)
+    except Exception as e:
+        fail(f"typing into pilot EDIT failed: {e}")
     time.sleep(0.3)
 
-    # 6) Foreground + focus verification AFTER sending keys.
+    # 3) Focus verification AFTER typing.
     if user32.GetForegroundWindow() != hwnd:
-        fail("pilot window lost foreground during typing; aborting")
+        fail("pilot window lost foreground during typing")
 
-    # 7) Exact-equality read-back, two ways.
-    edit_hwnd = edit.handle
-    via_wm = edit_text_hwnd(edit_hwnd)
-    try:
-        via_uia = edit.get_value() or ""
-    except Exception:
-        via_uia = None  # UIA Value may be unavailable; WM_GETTEXT is primary
+    # 4) Exact-equality read-back, BOTH channels mandatory.
+    via_wm = get_text_wm(hwnd)
     if via_wm != FULL:
         fail(f"WM_GETTEXT mismatch: {via_wm!r} != {FULL!r}")
-    if via_uia is not None and via_uia != FULL:
+    try:
+        via_uia = dlg.get_value()
+    except Exception as e:
+        fail(f"UIA value read failed (mandatory): {e}")
+    if via_uia is None or str(via_uia) != FULL:
         fail(f"UIA value mismatch: {via_uia!r} != {FULL!r}")
-    print("Read-back verified (WM_GETTEXT%s)." % (" + UIA" if via_uia is not None else ""))
+    print("Read-back verified (WM_GETTEXT + UIA).")
 
-    # 8) Close the pilot's window only; PASS after the window is gone.
-    wins_before = [w for w in Desktop(backend="uia").windows(process=pid)]
-    if len(wins_before) != 1:
-        fail(f"pid {pid} owns {len(wins_before)} windows; expected exactly 1; not closing")
-    dlg.close()
+    # 5) Best-effort screenshot — never gates PASS/FAIL.
+    try:
+        rect = ctypes.wintypes.RECT()
+        user32.GetWindowRect(hwnd, ctypes.byref(rect))
+        import os
+        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+        out = os.path.join(desktop if os.path.isdir(desktop) else os.path.expanduser("~"),
+                           "piwin_pilot.png")
+        ImageGrab.grab(bbox=(rect.left, rect.top, rect.right, rect.bottom),
+                       all_screens=True).save(out)
+        print("Screenshot (best-effort) saved:", out)
+    except Exception as e:
+        print("Screenshot skipped (does not affect result):", e)
+
+    # 6) Close OUR window; PASS only after it is gone.
+    user32.PostMessageW(hwnd, 0x0010, 0, 0)  # WM_CLOSE — our own window, no prompt
     gone = False
-    for _ in range(20):
-        wins = [w for w in Desktop(backend="uia").windows(process=pid)]
-        if not wins and not psutil.pid_exists(pid):
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if not user32.IsWindow(hwnd):
             gone = True
             break
-        time.sleep(0.5)
+        time.sleep(0.2)
     if not gone:
-        fail(f"pid {pid} still present after close; not printing PASS")
+        fail("pilot window did not close; not printing PASS")
 
-    print("PASS: typed, read back, and closed pid", pid)
+    print("PASS: typed, read back (both channels), closed.")
 
 
 if __name__ == "__main__":
-    if sys.platform != "win32":
-        print("FAIL: pilot must run on Windows (ctypes.windll is Windows-only)")
-        sys.exit(1)
-    main()
+    run()

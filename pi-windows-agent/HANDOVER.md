@@ -1,25 +1,23 @@
 # PiWin — Vibe CLI Handover Note (v3, post-audit-fixes)
 
 **Repo:** `sourovdeb/WEB-Projects`, branch `vibe/pi-windows-agent-79e5e7`
-**Tip:** `c2d84ed` — "Audit fixes: irrereversibility at mint, full-target
-requirement, mint inventory check, exact Host pinning, float normalization +
-committed hash vectors, state.schema.json, DENY adds codemode, pilot v4,
-docs corrected"
+**Tip:** see `git log -1` — the pilot and run doc change together; this line
+cannot go stale again.
 
 ## What I require from the operator (the single blocker)
 
 **The pilot's console output, run on the operator's Windows PC.** Nothing in
 the repo carries a run result. Required exactly:
 
-1. Close every Notepad window (pilot refuses if `notepad.exe` is running).
-2. PowerShell in `pi-windows-agent/pilot/`.
-3. `python -m pip install pywinauto==0.6.9 psutil==6.0.0` then `python pilot.py`
-   (explicit `python` — `py` may point at a missing 3.11; use the interpreter
-   that has the packages).
-4. Do not type or click while it runs.
-5. **Paste the full console text back into the chat** — PASS or FAIL. FAIL on
-   Windows 11 is the expected/safe outcome and is fully useful. Do not weaken
-   any check to force a pass.
+1. PowerShell in `pi-windows-agent/pilot/` (run it yourself, not from an
+   agent session).
+2. `python -m pip install pywinauto==0.6.9 pillow==10.4.0 psutil==6.0.0`
+   then `python pilot.py` (explicit `python` — `py` may point at a missing
+   3.11; use the interpreter that has the packages).
+3. Do not type or click while it runs.
+4. **Paste the full console text back into the chat** — PASS or FAIL. The
+   pilot targets its own top-level EDIT window (no Notepad involved), so a
+   FAIL names the exact broken step. Do not weaken any check to force a pass.
 
 Additionally required before any wiring work: a Mistral API key or subscription
 for Pi (for the agent's model), and the name of the operator's actual target
@@ -56,7 +54,7 @@ app for the second recorded run (`tested-apps.json`).
 | Pi gate `prototype/guard/piwin_gate.ts` | Spec-faithful sketch; loads only at assembly |
 | Tests `prototype/tests/` | **45 passing** (25 Python + 20 Node). Run from `prototype/`: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` |
 | Hash vectors `prototype/tests/hash_vectors.json` | Python-generated; Node suite reproduces all 7 — the cross-language check |
-| Pilot `pilot/pilot.py` (v4) | Owned EDIT target, focus-verified send (before+after), WM_GETTEXT+UIA exact-equality read-back, window-gone check, no dialog clicks. **Compile-checked only — never executed anywhere** |
+| Pilot `pilot/pilot.py` (v5) | Pilot-owned top-level Win32 EDIT (CreateWindowExW, own pump thread; starts nothing else), focus-verified send (before+after), WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot. **py_compile-checked only — never executed anywhere** |
 | Schema `docs/state.schema.json` | Committed; "schema-validated" is literal |
 | Docs | Internally consistent; DENY lists codemode; HANDOVER/README/provenance corrected |
 | Mockup `mockup/index.html` | Discussion artifact only |
