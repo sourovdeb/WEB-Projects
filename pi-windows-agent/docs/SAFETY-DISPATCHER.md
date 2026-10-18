@@ -12,9 +12,9 @@ wording elsewhere is retired; v0.1 implementers read this file only.
 
 | Class | Tools | v0.1 policy |
 |---|---|---|
-| DENY | `powershell`, `bash`, `edit`, `write`, all file-writing tools, all MCP tools, Playwright | **Denied outright. Not approvable.** Hash approval does not exist for these in v0.1, because a same-user shell can rewrite a same-user flag or extension file, and an approved write can replace the approval set itself. |
+| DENY | `powershell`, `bash`, `edit`, `write`, all file-writing tools, all MCP tools, Playwright, `codemode` | **Denied outright. Not approvable.** Hash approval does not exist for these in v0.1, because a same-user shell can rewrite a same-user flag or extension file, and an approved write can replace the approval set itself. |
 | APPROVE | `ui.*` calls minted by the UI host | Blocked unless hash-approved by the operator AND carrying a per-launch helper token issued by the UI host. The Python helper independently refuses to act without that token — so the guard does not rest on the Pi hook alone. |
-| ALLOW | `read`, window/control listing, window screenshot | Read-only; no approval needed. |
+| ALLOW | `read`, `list_windows`, `list_controls`, `screenshot` (unprefixed, read-only) | Read-only; no approval needed. |
 
 Later versions may move a tool from DENY to APPROVE only with the approval set
 stored outside the agent's reach (see below).
@@ -26,9 +26,11 @@ stored outside the agent's reach (see below).
 > UI host's per-launch token, **and** the target re-check passes.
 
 **Canonical JSON (both sides must use exactly this):** UTF-8,
-`json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`
-over `{"name": <tool name string>, "args": <args object>}`. Any encoding
-difference → mismatch → block.
+`json.dumps({"name": <str>, "args": <obj>}, sort_keys=True,
+separators=(",", ":"), ensure_ascii=False)`. Integral floats normalize to
+integers (1.0 hashes as 1); keys starting with `__` are stripped before
+hashing and are never a confirmation channel. Both suites must reproduce
+`prototype/tests/hash_vectors.json`. Any encoding difference → mismatch → block.
 
 **Approval set location:** held by the UI host process in memory and written
 only to a path the agent cannot write (OS-protected app-data with ACLs denying

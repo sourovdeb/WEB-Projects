@@ -16,6 +16,8 @@ driving exists until the Notepad pilot passes on the operator's machine
 - `ui-host/` — minimal localhost UI host (Node, no dependencies) that mints
   per-launch tokens and records approvals.
 - `tests/` — unit tests for the guard logic, run on Linux in this sandbox.
+- `tests/hash_vectors.json` — Python-generated hash vectors; the Node suite
+  reproducing them IS the cross-language verification.
 
 ## Run the tests
 
@@ -23,8 +25,14 @@ driving exists until the Notepad pilot passes on the operator's machine
 python3 -m unittest discover -s tests -v
 ```
 
-All tests must pass; they cover denial of shell/write tools, approval-hash
-binding, replay/stale-target rejection, and fail-closed defaults.
+All tests must pass (25 Python + 20 Node at v0.1.1). They cover denial of
+shell/write/MCP/codemode at BOTH mint and check, approval-hash binding,
+irreversibility derived from the minted action class (caller flags can add a
+confirm, never waive; `__` keys are not a confirm channel), full-target
+requirements, replay/stale-target rejection, exact Host pinning
+(`127.0.0.1:<port>` / `localhost:<port>` only), and float normalization.
+**Unit tests ran on Linux in this sandbox; no window-driving has ever run** —
+execute() is NotPilotedYet until the operator's pilot passes.
 
 ## What this prototype deliberately does not do
 

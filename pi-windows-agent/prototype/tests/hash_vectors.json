@@ -1,0 +1,67 @@
+[
+  {
+    "name": "ui.click",
+    "args": {
+      "pid": 5,
+      "window": "Notepad",
+      "control": "Export"
+    },
+    "sha256": "a0f8900a6601ee4f3c0ef587c9317a77e548fa41a4d864117ec9d8e2b128123a",
+    "note": null
+  },
+  {
+    "name": "ui.click",
+    "args": {
+      "pid": 5,
+      "window": "Notepad",
+      "control": "Export"
+    },
+    "sha256": "a0f8900a6601ee4f3c0ef587c9317a77e548fa41a4d864117ec9d8e2b128123a",
+    "note": "__keys stripped"
+  },
+  {
+    "name": "ui.type",
+    "args": {
+      "text": "hi",
+      "opts": {
+        "b": 2,
+        "a": 1
+      }
+    },
+    "sha256": "527b262e20eeaa91f4b115993b193934542e73b21c89e64c93eb3a45d47330eb",
+    "note": null
+  },
+  {
+    "name": "ui.type",
+    "args": {
+      "text": "hi",
+      "x": 1.0
+    },
+    "sha256": "aa34f9e667afc197bf6cba3a493a80c3ece37f5f85eb54dcb7ed218d23ca8064",
+    "note": "1.0 -> 1"
+  },
+  {
+    "name": "ui.type",
+    "args": {
+      "text": "hi",
+      "x": 1
+    },
+    "sha256": "aa34f9e667afc197bf6cba3a493a80c3ece37f5f85eb54dcb7ed218d23ca8064",
+    "note": "pair of previous"
+  },
+  {
+    "name": "list_windows",
+    "args": {},
+    "sha256": "f6902408e8494689f47c0eb8aa543c27565108f6a7614b8733bfc3732dbaeeea",
+    "note": null
+  },
+  {
+    "name": "ui.scroll",
+    "args": {
+      "delta": -3.5,
+      "n": 7.0
+    },
+    "sha256": "beb8df028aa33fce031fca0ce901a2ea3dae4cf0bdb1fdbf53b45250decb5780",
+    "note": null
+  }
+]

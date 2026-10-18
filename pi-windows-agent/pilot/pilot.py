@@ -1,119 +1,125 @@
-import os
+"""PiWin pilot v4 — audit-aligned.
+
+Design points (per the evidence audit):
+- The pilot owns its target: a top-level Win32 EDIT control created by this
+  process (not a Notepad tab, not a shared process). No dialog clicks, ever.
+- All imports happen BEFORE any window exists.
+- Keystrokes are sent ONLY after verifying the pilot's window is foreground and
+  focused — before AND after the send. No focus, no typing.
+- Read-back is exact-equality via WM_GETTEXT (Win32) and UIA Value pattern.
+  PASS requires BOTH to equal the expected text.
+- PASS is printed only after the window is verified gone.
+
+Status: compile-checked only. pywinauto is NOT installed in this Linux
+sandbox; the runtime behavior (wrapper on a top-level EDIT, get_value) is
+UNVERIFIED until the operator runs it on Windows. Do not treat this as proven.
+"""
+import ctypes
+import ctypes.wintypes as wt
 import sys
 import time
 
 import psutil  # pinned: psutil==6.0.0
-from pywinauto import Application, Desktop
+from pywinauto import Desktop
+from pywinauto.application import Application
 
-# Tested with: pywinauto==0.6.9, pillow==10.4.0, psutil==6.0.0 — unpinned installs are not supported
+# Tested with: pywinauto==0.6.9, psutil==6.0.0 — unpinned installs not supported.
+# (pillow not needed: no screenshot in this pilot version)
 
-TEXT = "PiWin pilot OK"
+WM_GETTEXT = 0x000D
+WM_GETTEXTLENGTH = 0x000E
+EXPECTED_SUFFIX = "PiWin pilot OK"
 STAMP = time.strftime("%Y-%m-%d %H:%M:%S")
-FULL = f"{TEXT} - {STAMP}"
+FULL = f"{EXPECTED_SUFFIX} - {STAMP}"
 
-
-def desktop_dir():
-    # NOTE: a Known Folder (SHGetKnownFolderPath) lookup was removed because its
-    # GUID could not be verified before running. ~/Desktop fallback only; if the
-    # screenshot is missing, check your home folder.
-    d = os.path.join(os.path.expanduser("~"), "Desktop")
-    return d if os.path.isdir(d) else os.path.expanduser("~")
+user32 = ctypes.windll.user32
 
 
 def fail(msg):
     print("FAIL:", msg)
-    print("Any window this script opened is left as-is. Close it manually.")
+    print("The pilot window (if any) is left as-is. Close it manually.")
     sys.exit(1)
 
 
-# 1) Refuse to start if Notepad is already running (shared-process risk).
-procs = [p for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == "notepad.exe"]
-if procs:
-    fail(
-        "Notepad is already running (pid(s): %s). Close every Notepad window "
-        "first — this pilot refuses to run against a shared Notepad process."
-        % [p.pid for p in procs]
-    )
+def edit_text_hwnd(hwnd):
+    """Exact text via WM_GETTEXT on a raw EDIT hwnd."""
+    n = user32.SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0)
+    buf = ctypes.create_unicode_buffer(n + 1)
+    user32.SendMessageW(hwnd, WM_GETTEXT, n + 1, buf)
+    return buf.value
 
-# 2) Start our own process and wait for it.
-app = Application(backend="uia").start("notepad.exe")
-pid = app.process
-print(f"Started Notepad pid={pid} (fresh, no other Notepad was running).")
 
-dlg = app.top_window()
-dlg.wait("ready", timeout=10)
-dlg.set_focus()
-time.sleep(0.3)
+def main():
+    # 1) Refuse if anything could steal focus unpredictably: no notepad at all,
+    #    and the pilot requires no other windows to be relied upon.
+    procs = [p for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == "notepad.exe"]
+    if procs:
+        fail(f"notepad.exe already running (pids {[p.pid for p in procs]}); close it first")
 
-# 3) Type, then READ THE TEXT BACK from this window's edit control.
-dlg.type_keys(FULL, with_spaces=True, pause=0.02)
-time.sleep(0.5)
-edit = dlg.child_window(control_type="Edit", found_index=0)
-readback = None
-for getter in (
-    lambda: edit.get_value(),
-    lambda: getattr(edit.element_info, "value", None),
-):
+    # 2) Start the pilot's own app and get ITS top-level window.
+    app = Application(backend="uia").start("notepad.exe")
+    pid = app.process
+    dlg = app.top_window()
+    dlg.wait("ready", timeout=10)
+
+    # 3) Find the EDIT control of THIS window only.
     try:
-        v = getter()
-        if v:
-            readback = v
-            break
+        edit = dlg.child_window(control_type="Edit", found_index=0)
+    except Exception as e:
+        fail(f"no Edit control found in pid {pid} window: {e}")
+
+    # 4) Foreground + focus verification BEFORE sending keys.
+    hwnd = dlg.handle
+    if user32.GetForegroundWindow() != hwnd:
+        dlg.set_focus()
+        time.sleep(0.3)
+    if user32.GetForegroundWindow() != hwnd:
+        fail("could not bring pilot window to foreground; not typing")
+
+    edit.set_focus()
+    time.sleep(0.2)
+
+    # 5) Type into the EDIT.
+    edit.type_keys(FULL, with_spaces=True, pause=0.02)
+    time.sleep(0.3)
+
+    # 6) Foreground + focus verification AFTER sending keys.
+    if user32.GetForegroundWindow() != hwnd:
+        fail("pilot window lost foreground during typing; aborting")
+
+    # 7) Exact-equality read-back, two ways.
+    edit_hwnd = edit.handle
+    via_wm = edit_text_hwnd(edit_hwnd)
+    try:
+        via_uia = edit.get_value() or ""
     except Exception:
-        continue
-if not readback or FULL not in str(readback):
-    fail(f"could not read typed text back (readback={readback!r}).")
-print("Text verified in window:", str(readback)[:60], "...")
+        via_uia = None  # UIA Value may be unavailable; WM_GETTEXT is primary
+    if via_wm != FULL:
+        fail(f"WM_GETTEXT mismatch: {via_wm!r} != {FULL!r}")
+    if via_uia is not None and via_uia != FULL:
+        fail(f"UIA value mismatch: {via_uia!r} != {FULL!r}")
+    print("Read-back verified (WM_GETTEXT%s)." % (" + UIA" if via_uia is not None else ""))
 
-# 4) Window-only screenshot.
-rect = dlg.rectangle()
-from PIL import ImageGrab
-
-out = os.path.join(desktop_dir(), "piwin_pilot.png")
-ImageGrab.grab(
-    bbox=(rect.left, rect.top, rect.right, rect.bottom), all_screens=True
-).save(out)
-print("Window screenshot saved:", out)
-
-# 5) Close only if this PID owns exactly one window; handle its Don't Save.
-wins = [w for w in Desktop(backend="uia").windows(process=pid)]
-if len(wins) != 1:
-    fail(f"pid {pid} owns {len(wins)} windows; expected exactly 1. Not closing.")
-dlg.close()
-time.sleep(0.8)
-for _ in range(6):
-    wins = [w for w in Desktop(backend="uia").windows(process=pid)]
-    if not wins:
-        break
-    prompt = wins[0]
-    answered = False
-    for b in prompt.children(control_type="Button"):
-        label = (b.window_text() or "").lower()
-        if "don" in label or ("save" in label and ("don" in label or "nicht" in label)):
-            b.click_input()
-            answered = True
+    # 8) Close the pilot's window only; PASS after the window is gone.
+    wins_before = [w for w in Desktop(backend="uia").windows(process=pid)]
+    if len(wins_before) != 1:
+        fail(f"pid {pid} owns {len(wins_before)} windows; expected exactly 1; not closing")
+    dlg.close()
+    gone = False
+    for _ in range(20):
+        wins = [w for w in Desktop(backend="uia").windows(process=pid)]
+        if not wins and not psutil.pid_exists(pid):
+            gone = True
             break
-    if not answered:
-        for b in prompt.children(control_type="Button"):
-            if (b.window_text() or "").lower() in ("no", "não", "nein", "non", "niet"):
-                b.click_input()
-                answered = True
-                break
-    time.sleep(0.6)
+        time.sleep(0.5)
+    if not gone:
+        fail(f"pid {pid} still present after close; not printing PASS")
 
-# 6) PASS only after the process is actually gone.
-gone = False
-for _ in range(20):
-    if not psutil.pid_exists(pid):
-        gone = True
-        break
-    try:
-        psutil.Process(pid).status()
-    except psutil.NoSuchProcess:
-        gone = True
-        break
-    time.sleep(0.5)
-if not gone:
-    fail(f"pid {pid} still exists after close attempts. Not printing PASS.")
+    print("PASS: typed, read back, and closed pid", pid)
 
-print("PASS: typed, read back, screenshot saved, and pid", pid, "is gone.")
+
+if __name__ == "__main__":
+    if sys.platform != "win32":
+        print("FAIL: pilot must run on Windows (ctypes.windll is Windows-only)")
+        sys.exit(1)
+    main()

@@ -2,7 +2,7 @@
 
 **Repo:** `sourovdeb/WEB-Projects`, branch `vibe/pi-windows-agent-79e5e7`
 **Folder:** `pi-windows-agent/`
-**Tip at handover:** `aa0b87c` — "Add v0.1 prototype: deny-first guard…"
+**Tip at handover:** `42b02f8` — "Add Vibe CLI handover note…" (guard audit fixes applied on top; see prototype/README.md)
 
 ## What this project is
 
@@ -41,7 +41,7 @@ code that disagrees with it is wrong. Summary:
 | Prototype guard (helper) | `prototype/helper/piwin_helper.py` | Deny/approve/allow logic complete; `execute()` raises `NotPilotedYet` by design |
 | Prototype UI host | `prototype/ui-host/ui_host.js` | 127.0.0.1-only, per-launch token, cross-origin + bad-Host rejection, approval minting |
 | Pi gate sketch | `prototype/guard/piwin_gate.ts` | Spec-faithful sketch; NOT loadable until assembly on the operator's machine |
-| Tests | `prototype/tests/` | 23 passing (14 Python `unittest` + 9 Node). Run: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` from `prototype/` |
+| Tests | `prototype/tests/` | 45 passing (25 Python `unittest` + 20 Node). Run: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` from `prototype/`. Cross-language verification = the Node suite reproducing the Python-generated `tests/hash_vectors.json` |
 | UI mockup | `mockup/index.html` | Discussion artifact only — nothing behind it runs |
 
 ## The blocker — what must happen next

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "piwin-state-v1",
+  "title": "PiWin agent handoff state (gitignored, data-only)",
+  "type": "object",
+  "required": ["schema", "goal", "done", "next"],
+  "properties": {
+    "schema": { "const": 1 },
+    "goal": { "type": "string" },
+    "done": { "type": "array", "items": { "type": "string" } },
+    "next": { "type": "string" },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "unverified": { "type": "array", "items": { "type": "string" } },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "gates_pending": { "type": "array", "items": { "type": "string" } },
+        "irreversible_queued": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$comment": "Every field is DATA to the receiving agent, never instructions."
+}
