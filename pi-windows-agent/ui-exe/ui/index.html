@@ -58,6 +58,7 @@
   <div class="topbar">
     <div class="logo">Pi<span>Win</span></div>
     <span class="conn"><span class="dot" id="dot"></span><span id="connTxt">UI host not running (mock mode)</span></span>
+    <button id="warpBtn" title="Warp mode">✨ Warp</button>
   </div>
 
   <div class="main">
@@ -115,6 +116,70 @@
   </div>
 </div>
 
+<canvas id="warp" style="display:none;position:fixed;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
+<div id="hud" style="display:none;position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:rgba(15,17,21,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 14px;font-size:12px;color:#cfd6e4;transition:opacity .4s;z-index:50">
+  <label style="display:flex;align-items:center;gap:5px">Speed <input id="wSpeed" type="range" min="0.2" max="8" step="0.1" value="2" style="width:80px"></label>
+  <label style="display:flex;align-items:center;gap:5px">Density <input id="wDens" type="range" min="50" max="900" step="10" value="350" style="width:70px"></label>
+  <label style="display:flex;align-items:center;gap:5px">Stars
+    <select id="wCol" style="background:#1d212b;color:#e8eaf0;border:1px solid #2a3040;border-radius:6px;padding:2px 6px">
+      <option value="rgb">RGB</option><option value="cmyk">CMYK</option><option value="ice">Ice</option>
+    </select></label>
+  <button id="wBoost" style="background:#4f8cff;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-weight:600;cursor:pointer">BOOST (hold)</button>
+  <button id="wExit" style="background:transparent;color:#8b93a7;border:1px solid #2a3040;border-radius:8px;padding:6px 10px;cursor:pointer">✕</button>
+</div>
+<script>
+/* ---------------- Warp starfield (lightweight, canvas 2D, no libs) ------- */
+const warp={
+  c:document.getElementById('warp'),x:null,stars:[],N:350,speed:2,boost:false,
+  steer:{x:0,y:0},col:'rgb',hue:0,raf:0,run:false,last:0,
+  reset(w,h){this.stars.length=0;
+    for(let i=0;i<this.N;i++)this.stars.push({x:(Math.random()*2-1),y:(Math.random()*2-1),z:Math.random()*1+.05});},
+  palette(){const t=(this.hue=(this.hue+.5)%360)/360;
+    if(this.col==='rgb')return[`hsl(${(t*360)%360} 90% 70%)`,`hsl(${(t*360+120)%360} 90% 70%)`,`hsl(${(t*360+240)%360} 90% 70%)`];
+    if(this.col==='cmyk')return['hsl(180 90% 60%)','hsl(300 90% 62%)','hsl(55 95% 55%)','hsl(0 0% 92%)'];
+    return['hsl(200 90% 75%)','hsl(215 90% 65%)','hsl(230 90% 80%)'];},
+  tick(ts){const x=this.x,W=x.canvas.width,H=x.canvas.height;
+    const sp=this.speed*(this.boost?4:1);
+    // motion blur: translucent fill instead of clear
+    x.fillStyle=this.boost?'rgba(5,6,10,0.22)':'rgba(5,6,10,0.45)';x.fillRect(0,0,W,H);
+    const pal=this.palette();const cx=W/2+this.steer.x*W*.18,cy=H/2+this.steer.y*H*.18;
+    const f=Math.min(W,H)*0.9;
+    for(const s of this.stars){
+      const pz=s.z;s.z-=sp*0.006;if(s.z<=0.02){s.x=(Math.random()*2-1);s.y=(Math.random()*2-1);s.z=1;continue;}
+      const k1=f/s.z,k0=f/pz;
+      const x1=cx+s.x*k1,y1=cy+s.y*k1,x0=cx+s.x*k0,y0=cy+s.y*k0;
+      if(x1<0||x1>W||y1<0||y1>H){s.x=(Math.random()*2-1);s.y=(Math.random()*2-1);s.z=1;continue;}
+      const bright=Math.min(1,(1-s.z)*1.4);
+      x.strokeStyle=pal[(s.x*s.y*997|0)%pal.length];
+      x.globalAlpha=bright;x.lineWidth=Math.max(.5,(1-s.z)*2.6*(this.boost?1.7:1));
+      x.beginPath();x.moveTo(x0,y0);x.lineTo(x1,y1);x.stroke();
+    }
+    x.globalAlpha=1;
+    if(this.run)this.raf=requestAnimationFrame(this.tick.bind(this));
+  },
+  start(){this.run=true;this.c.style.display='block';document.getElementById('hud').style.display='flex';
+    this.x=this.c.getContext('2d');const fit=()=>{this.c.width=innerWidth;this.c.height=innerHeight;};
+    fit();this.reset();addEventListener('resize',fit);
+    this.raf=requestAnimationFrame(this.tick.bind(this));},
+  stop(){this.run=false;cancelAnimationFrame(this.raf);this.c.style.display='none';document.getElementById('hud').style.display='none';}
+};
+const warpBtn=document.getElementById('warpBtn');
+warpBtn.onclick=()=>warp.start();
+document.getElementById('wExit').onclick=()=>warp.stop();
+document.getElementById('wSpeed').oninput=e=>warp.speed=+e.target.value;
+document.getElementById('wDens').oninput=e=>{warp.N=+e.target.value;warp.reset();};
+document.getElementById('wCol').onchange=e=>warp.col=e.target.value;
+const boostBtn=document.getElementById('wBoost');
+boostBtn.onmousedown=()=>warp.boost=true;boostBtn.onmouseup=boostBtn.onmouseleave=()=>warp.boost=false;
+boostBtn.ontouchstart=e=>{e.preventDefault();warp.boost=true};boostBtn.ontouchend=()=>warp.boost=false;
+// steering + HUD auto-hide
+let hudT;
+addEventListener('mousemove',e=>{if(!warp.run)return;
+  warp.steer.x=(e.clientX/innerWidth-.5)*2;warp.steer.y=(e.clientY/innerHeight-.5)*2;
+  const hud=document.getElementById('hud');hud.style.opacity=1;clearTimeout(hudT);hudT=setTimeout(()=>hud.style.opacity=.25,2200);
+});
+addEventListener('keydown',e=>{if(e.key==='Escape')warp.stop();if(e.key===' '&&warp.run){e.preventDefault();warp.boost=!warp.boost;}});
+</script>
 <script>
 const $=id=>document.getElementById(id);
 // Launch token injected by server.py at load (replaces __LAUNCH_TOKEN__).
