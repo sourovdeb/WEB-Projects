@@ -15,8 +15,7 @@ AND UIA — both mandatory**, saves a best-effort screenshot (never gates the
 result), closes its own window, and prints PASS only after the window is
 verified gone. No dialogs, no button-label matching, no prompts.
 
-**It has never been executed anywhere (py_compile-checked only under
-3.12).** A FAIL is a real result; do not weaken any check to force a pass.
+**It was executed once by Sourov on 2026-10-24: run 1 FAILED on the LRESULT import, run 3 PASSED at tip 8e502d8 — see HANDOVER "Operator run record". Before that run it had only been py_compile-checked under CPython 3.12.** A FAIL is a real result; do not weaken any check to force a pass.
 
 ## Run
 

@@ -54,12 +54,12 @@ app for the second recorded run (`tested-apps.json`).
 | Pi gate `prototype/guard/piwin_gate.ts` | Spec-faithful sketch; loads only at assembly |
 | Tests `prototype/tests/` | **45 passing** (25 Python + 20 Node). Run from `prototype/`: `python3 -m unittest discover -s tests` and `node tests/test_ui_host.js` |
 | Hash vectors `prototype/tests/hash_vectors.json` | Python-generated; Node suite reproduces all 7 — the cross-language check |
-| Pilot `pilot/pilot.py` (v5b) | Pilot-owned top-level Win32 EDIT (CreateWindowExW on the pilot's own thread; starts nothing else), same-thread foreground+focus checks before and after the send, WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot, clean process exit. **py_compile-checked only — never executed anywhere** |
+| Pilot `pilot/pilot.py` (v5b) | Pilot-owned top-level Win32 EDIT (CreateWindowExW on the pilot's own thread; starts nothing else), same-thread foreground+focus checks before and after the send, WM_GETTEXT+UIA exact-equality read-back (both mandatory), window-gone check before PASS, best-effort screenshot, clean process exit. **py_compile-checked only — never executed anywhere** [Outdated 2026-10-24: executed on the operator's PC — PASS on run 3; see "Operator pilot run record" below] |
 | Schema `docs/state.schema.json` | Committed; "schema-validated" is literal |
 | Docs | Internally consistent; DENY lists codemode; HANDOVER/README/provenance corrected |
 | Mockup `mockup/index.html` | Discussion artifact only |
 
-**Honest gaps:** no window-driving has ever run; `execute()` raises
+**Honest gaps:** no window-driving has ever run [Outdated 2026-10-24: the pilot has since driven and read back its own Win32 EDIT — see the run record below; `execute()` in the helper remains unimplemented]; `execute()` raises
 `NotPilotedYet` by design; helper/UI-host target field names are internally
 consistent but unwired to each other or to Pi; wiring happens only after a
 pilot PASS.
@@ -126,7 +126,70 @@ can exit.
 - **No PiWin code has executed on Windows** except two Win32 threading
   probes (own off-screen windows, zero keystrokes — see the probe record
   above). The pilot itself has never been executed anywhere; the UIA engine
-  is UNVERIFIED until the operator's pilot runs. No PR exists; delivery is
+  is UNVERIFIED until the operator's pilot runs. [Outdated 2026-10-24: the pilot HAS been executed on the operator's Windows PC — PASS on run 3; the UIA ValuePattern read-back is verified on this machine for an EDIT control; see "Operator pilot run record" below.] No PR exists; delivery is
   the pushed branch. Unit tests ran on Linux in this sandbox and were
   re-run on the operator's Windows PC (25 Python + 20 Node, green both
   times).
+
+## Operator pilot run record — 2026-10-24 (operator's Windows PC, UTC+4)
+
+Executed per `pilot/RUN-THIS.md` at tip `8e502d8`, branch
+`pilot-v5b-threading-fix`. Run folder (all artifacts on E:, C: untouched):
+`E:\piwin-run-2026-10-24\`. Verbatim consoles: `pilot-console-run1.txt`,
+`pilot-console-run2.txt`, `pilot-console-run3.txt` in that folder.
+
+- **Run 1 (10:51) — FAIL, pre-GUI.** `AttributeError: module
+  'ctypes.wintypes' has no attribute 'LRESULT'` at `pilot.py:72`, exit 1,
+  before `CreateWindowExW`. No window, no keystroke, no other app touched.
+  Root cause: `ctypes.wintypes.LRESULT` does not exist on Python 3.12.13
+  (the documented interpreter on this PC).
+- **Fix 1 (uncommitted).** `LRESULT = getattr(wintypes, "LRESULT",
+  ctypes.c_ssize_t)` after the wintypes import (4 added lines incl. a
+  comment); the two `restype` lines use the alias. Semantics-preserving
+  (`LRESULT` = `LONG_PTR` = `c_ssize_t`). Chosen over downloading Python
+  3.13.15 (TypeSafe FIX-PILOT-312 p=1.00).
+- **Run 2 (~10:58) — FAIL at the UIA read-back.** Window created,
+  foreground+focus verified before typing, keystrokes sent, focus held
+  after, WM_GETTEXT read-back OK — then `edit.get_value()` raised
+  `AttributeError` via pywinauto's `WindowSpecification` magic lookup
+  (`get_value` exists only on `EditWrapper`, not the generic `UIAWrapper`).
+  The hands were already proven through the Win32 read-back; only the UIA
+  leg broke.
+- **Fix 2 (uncommitted, 1 line).** `edit.get_value()` →
+  `edit.wrapper_object().get_value()` (probe `probe_uia.py` confirmed
+  `wrapper_object()` is the `EditWrapper` and `get_value()` returns
+  `iface_value.CurrentValue`). The PASS criterion is unchanged: UIA
+  ValuePattern read-back, mandatory, exact equality.
+- **Run 3 (11:01:45) — PASS, exit 0.** All three PASS criteria met:
+  WM_GETTEXT and UIA ValuePattern read-backs both equaled the typed text
+  exactly (`PiWin pilot OK 2026-10-24 110145`), the pilot's EDIT was
+  foreground at send time, and the window is gone. Screenshot:
+  `C:\Users\souro\Desktop\piwin_pilot.png` (560x220 PNG, 5,906 bytes,
+  magic bytes verified).
+- **Environment caveats.** Free RAM plateaued at ~0.7 GB of 15.68 GB during
+  the runs (a cloud agent driving Chrome held ~53 Chrome processes); below
+  the plan's 1.5 GB abort line, proceeded per the operator's run-now
+  instruction because the pilot FAILs safely (own window only). Foreground
+  window stable throughout; other sessions (OpenCode, second Vibe,
+  workflows worker, cloud agent) not interrupted. The pilot ran in a
+  dedicated venv on E: (`E:\piwin-run-2026-10-24\venv`; pywinauto 0.6.9,
+  pillow 10.4.0); the base interpreter and C: were untouched.
+- **Guard untouched.** `prototype/guard/piwin_gate.ts` and
+  `prototype/helper/piwin_helper.py` were not modified. Tests re-run after
+  both fixes: 25 Python + 20 Node, green. Both pilot.py fixes are left
+  **uncommitted** for the operator's review; `git diff` touches only
+  `pilot/pilot.py` (4 added lines + 3 one-line changes).
+- **Gotchas for future runs.** (1) `ctypes.wintypes.LRESULT` is absent on
+  Python 3.12 — alias it to `ctypes.c_ssize_t`. (2) pywinauto 0.6.9
+  `WindowSpecification.__getattribute__` (magic lookup) resolves only
+  attributes of the generic wrapper; call `EditWrapper`-only methods via
+  `wrapper_object()`. (3) `py_compile` cannot catch runtime attribute
+  errors — consistent with the earlier "compile-checked only" status.
+
+**Status after the run:** the pilot's PASS criterion is met on this
+machine. Per "After the pilot output arrives" above, the next phase is
+wiring: (1) implement `execute()` in the helper against pywinauto; (2) wire
+UI host ↔ Pi gate ↔ helper into an installable folder; (3) operator
+installs; (4) second recorded run against the operator's actual target app
+→ `tested-apps.json`. Still required before wiring: a Mistral API key or
+subscription for Pi, and the operator's actual target app name.

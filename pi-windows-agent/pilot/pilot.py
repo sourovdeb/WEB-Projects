@@ -26,6 +26,10 @@ import sys
 import time
 from ctypes import wintypes
 
+# wintypes.LRESULT exists only on newer CPython; LRESULT is LONG_PTR (pointer-sized
+# signed), which ctypes.c_ssize_t matches on both 32- and 64-bit Windows.
+LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
+
 if sys.platform != "win32":
     sys.exit("FAIL: this pilot runs on Windows only.")
 
@@ -69,7 +73,7 @@ user32.DestroyWindow.restype = wintypes.BOOL
 user32.SendMessageW.argtypes = (
     wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM,
 )
-user32.SendMessageW.restype = wintypes.LRESULT
+user32.SendMessageW.restype = LRESULT
 user32.PeekMessageW.argtypes = (
     ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT,
     wintypes.UINT, wintypes.UINT,
@@ -78,7 +82,7 @@ user32.PeekMessageW.restype = wintypes.BOOL
 user32.TranslateMessage.argtypes = (ctypes.POINTER(wintypes.MSG),)
 user32.TranslateMessage.restype = wintypes.BOOL
 user32.DispatchMessageW.argtypes = (ctypes.POINTER(wintypes.MSG),)
-user32.DispatchMessageW.restype = wintypes.LRESULT
+user32.DispatchMessageW.restype = LRESULT
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 
@@ -168,7 +172,7 @@ buf = ctypes.create_unicode_buffer(length + 1)
 user32.SendMessageW(HWND, WM_GETTEXT, length + 1, ctypes.addressof(buf))
 win32_text = buf.value
 try:
-    uia_text = edit.get_value()
+    uia_text = edit.wrapper_object().get_value()
 except Exception as exc:  # noqa: BLE001 — any UIA read failure is a pilot FAIL
     fail(f"UI Automation read-back failed ({exc!r}); the UIA tree did not yield the text.")
 if uia_text is None:
