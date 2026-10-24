@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PiWin</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--card:#1d212b;--line:#2a3040;
+    --txt:#e8eaf0;--mut:#8b93a7;--acc:#4f8cff;--acc2:#6ea8ff;
+    --ok:#3ecf8e;--warn:#f5b83d;--bad:#ef5b5b;--purple:#b18cff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--txt);font-size:14px;overflow:hidden}
+  .app{display:flex;flex-direction:column;height:100vh}
+  /* topbar */
+  .topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  .logo{font-weight:700;font-size:16px}
+  .logo span{color:var(--acc)}
+  .conn{margin-left:auto;font-size:11px;color:var(--mut)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:5px;vertical-align:middle}
+  .dot.on{background:var(--ok)}
+  /* main scroll area */
+  .main{flex:1;overflow:auto;padding:16px 20px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  label{display:block;font-size:11px;color:var(--mut);margin-bottom:5px}
+  select,input[type=text],textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px 10px;font-size:13px}
+  select:focus,input:focus,textarea:focus{outline:1px solid var(--acc)}
+  button{cursor:pointer;border:none;border-radius:8px;font-size:13px;padding:8px 13px;background:var(--card);color:var(--txt);border:1px solid var(--line)}
+  button:hover{border-color:var(--acc)}
+  .btn-acc{background:var(--acc);color:#fff;font-weight:600;border:none}
+  /* steps */
+  .step{display:flex;gap:8px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+  .num{min-width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .step input{flex:1}
+  .del{background:transparent;border:none;color:var(--mut);font-size:15px}
+  .add-row{display:flex;gap:8px;align-items:center;margin-top:6px}
+  /* checkbox rows */
+  .checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+  .check{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px;cursor:pointer}
+  .check:hover{border-color:var(--acc)}
+  .check input{accent-color:var(--acc)}
+  /* run bar */
+  .runbar{background:var(--panel);border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center;flex-shrink:0}
+  .hint{font-size:11px;color:var(--mut)}
+  .spacer{flex:1}
+  .btn-big{padding:11px 28px;font-size:14px}
+  /* log */
+  .log{background:#0b0d12;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:Consolas,monospace;font-size:12px;max-height:160px;overflow:auto;color:var(--mut);white-space:pre-wrap}
+  .log .ok{color:var(--ok)} .log .err{color:var(--bad)} .log .warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">Pi<span>Win</span></div>
+    <span class="conn"><span class="dot" id="dot"></span><span id="connTxt">UI host not running (mock mode)</span></span>
+  </div>
+
+  <div class="main">
+    <div class="panel">
+      <h2>Agent setup</h2>
+      <div class="grid">
+        <div><label>Select Model</label>
+          <select id="model"><option>Mistral Small</option><option>Mistral Medium</option><option>Mistral Large</option><option>Local (llama.cpp)</option></select></div>
+        <div><label>How Many Sub Agents?</label>
+          <select id="subs"><option>0</option><option>1</option><option>2</option><option>3</option><option>5</option></select></div>
+        <div><label>Mode: Fast / Slow / Superslow</label>
+          <select id="mode"><option>Fast</option><option>Slow</option><option>Superslow</option></select></div>
+        <div><label>Select Git Repo</label>
+          <select id="repo"><option>sourovdeb/WEB-Projects</option><option>Other…</option></select></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Skills, tools &amp; verification</h2>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="cSkills"> Select Skills</label>
+        <label class="check"><input type="checkbox" id="cMcp"> Select MCP</label>
+        <label class="check"><input type="checkbox" id="cExt"> Select Extension</label>
+        <label class="check"><input type="checkbox" id="cJev" checked> ✓ check to Select Typesafe (Jev verification)</label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Steps and instructions</h2>
+      <div id="steps">
+        <div class="step"><div class="num">1</div><input type="text" placeholder="Step…"></div>
+      </div>
+      <div class="add-row">
+        <button id="addStep">＋ Click to Select More Steps</button>
+        <button id="help">💡 Click to Ask help to build the prompt</button>
+      </div>
+      <div style="margin-top:10px">
+        <label>Below and Select or write Steps and Instructions</label>
+        <textarea id="instr" rows="4" placeholder="Or write everything here in plain words. If it's unclear, PiWin will ask one question — never guess."></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Run log</h2>
+      <div class="log" id="log">UI prototype — buttons are wired for demo purposes only. Nothing is sent to any agent.</div>
+    </div>
+  </div>
+
+  <div class="runbar">
+    <span class="hint">Every call needs your approval. The bot decides nothing.</span>
+    <span class="spacer"></span>
+    <button id="dry">🧪 Test (dry run)</button>
+    <button id="save">💾 Save as template</button>
+    <button class="btn-acc btn-big" id="run">▶ Run</button>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+// Launch token injected by server.py at load (replaces __LAUNCH_TOKEN__).
+const TOKEN="__LAUNCH_TOKEN__";
+async function api(path, body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:TOKEN,...body})});
+  return {status:r.status, data:await r.json().catch(()=>({}))};
+}
+(async()=>{ // status ping: flip the connection dot if the real host answers
+  try{ const r=await fetch('/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:TOKEN})});
+    if(r.ok){ $('dot').classList.add('on'); $('connTxt').textContent='UI host connected (guard active)'; }
+  }catch(e){/* stays in mock mode */}
+})();
+function renum(){[...document.querySelectorAll('.step')].forEach((s,i)=>s.querySelector('.num').textContent=i+1)}
+$('addStep').onclick=()=>{
+  const d=document.createElement('div');d.className='step';
+  d.innerHTML='<div class="num"></div><input type="text" placeholder="Step…"><button class="del">✕</button>';
+  d.querySelector('.del').onclick=()=>{d.remove();renum()};
+  $('steps').appendChild(d);renum();d.querySelector('input').focus();
+};
+$('help').onclick=()=>{
+  const q=prompt('Describe what you want in your own words — PiWin will turn it into steps and ask one question if anything is unclear:');
+  if(q){$('instr').value=q;log('Prompt captured. When wired: the agent builds steps from this and asks exactly one clarifying question if needed — never guesses.','ok')}
+};
+$('dry').onclick=async()=>{const r=await api('/status');
+  if(r.status===200) log('Dry run: guard host is live. (Agent wiring comes after the pilot PASS — no calls will execute yet.)','warn');
+  else log('Dry run in mock mode — UI host not reachable.','warn')};
+$('save').onclick=()=>{log('Template saved locally (demo). Templates expand into visible steps before any Run.','ok')};
+$('run').onclick=()=>{
+  const steps=[...document.querySelectorAll('.step input')].map(i=>i.value).filter(Boolean);
+  log('Run requested with '+steps.length+' step(s). BLOCKED in prototype: the dispatcher requires a wired agent. This button will only ever execute hash-approved calls.','err');
+};
+function log(m,c){const el=$('log');const line=document.createElement('div');if(c)line.className=c;line.textContent='› '+m;el.appendChild(line);el.scrollTop=el.scrollHeight}
+</script>
+</body>
+</html>
